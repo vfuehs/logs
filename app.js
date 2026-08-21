@@ -1,6 +1,7 @@
 const logTypes = ['Software', 'CAD', 'Outreach', 'Portfolio', 'Parts', 'Parts order', 'Meetings'];
 const colors = ['cyan', 'violet', 'lime', 'amber', 'coral', 'blue', 'meeting'];
 const storageKey = 'trace-log-entries';
+const deletedKey = 'trace-log-deleted-entries';
 const homeView = document.querySelector('#home-view');
 const formView = document.querySelector('#form-view');
 const sheetView = document.querySelector('#sheet-view');
@@ -10,6 +11,7 @@ const entryTitle = document.querySelector('#entry-title');
 const toast = document.querySelector('#toast');
 let selectedType = 'Software';
 let logsUnlocked = sessionStorage.getItem('trace-log-unlocked') === 'true';
+let deletedEntries = JSON.parse(sessionStorage.getItem(deletedKey) || '[]');
 
 function getEntries() {
   try {
@@ -108,11 +110,27 @@ function renderSheet() {
 }
 
 function deleteEntry(id) {
-  saveEntries(getEntries().filter((entry) => entry.id !== id));
+  const entries = getEntries();
+  const deletedEntry = entries.find((entry) => entry.id === id);
+  if (!deletedEntry) return;
+  deletedEntries.push(deletedEntry);
+  sessionStorage.setItem(deletedKey, JSON.stringify(deletedEntries));
+  saveEntries(entries.filter((entry) => entry.id !== id));
   renderSheet();
   renderActivity();
   renderStreak();
-  showToast('Entry removed from your log.');
+  showToast('Entry removed. Press Ctrl+Z to restore it.');
+}
+
+function undoDelete() {
+  const entry = deletedEntries.pop();
+  if (!entry) return;
+  saveEntries([...getEntries(), entry]);
+  sessionStorage.setItem(deletedKey, JSON.stringify(deletedEntries));
+  renderSheet();
+  renderActivity();
+  renderStreak();
+  showToast('Entry restored to your log.');
 }
 
 function showToast(message) {
@@ -133,6 +151,14 @@ document.querySelector('#lock-logs').addEventListener('click', () => {
   sessionStorage.removeItem('trace-log-unlocked');
   showOnly(lockView);
   document.querySelector('#unlock-password').focus();
+});
+document.addEventListener('keydown', (event) => {
+  const target = event.target;
+  const isEditing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !isEditing && deletedEntries.length) {
+    event.preventDefault();
+    undoDelete();
+  }
 });
 document.querySelector('#unlock-form').addEventListener('submit', (event) => {
   event.preventDefault();
