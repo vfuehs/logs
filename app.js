@@ -4,10 +4,12 @@ const storageKey = 'trace-log-entries';
 const homeView = document.querySelector('#home-view');
 const formView = document.querySelector('#form-view');
 const sheetView = document.querySelector('#sheet-view');
+const lockView = document.querySelector('#lock-view');
 const formType = document.querySelector('#form-type');
 const entryTitle = document.querySelector('#entry-title');
 const toast = document.querySelector('#toast');
 let selectedType = 'Software';
+let logsUnlocked = sessionStorage.getItem('trace-log-unlocked') === 'true';
 
 function getEntries() {
   try {
@@ -43,6 +45,7 @@ function showOnly(view) {
   homeView.hidden = view !== homeView;
   formView.hidden = view !== formView;
   sheetView.hidden = view !== sheetView;
+  lockView.hidden = view !== lockView;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -55,6 +58,11 @@ function openLogForm(type) {
 
 function openSheet(type) {
   selectedType = type;
+  if (!logsUnlocked) {
+    showOnly(lockView);
+    document.querySelector('#unlock-password').focus();
+    return;
+  }
   renderSheet();
   showOnly(sheetView);
 }
@@ -120,6 +128,27 @@ document.querySelector('#sheet-back').addEventListener('click', () => showOnly(h
 document.querySelector('#sheet-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#empty-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#timeline-button').addEventListener('click', () => openSheet(selectedType));
+document.querySelector('#lock-logs').addEventListener('click', () => {
+  logsUnlocked = false;
+  sessionStorage.removeItem('trace-log-unlocked');
+  showOnly(lockView);
+  document.querySelector('#unlock-password').focus();
+});
+document.querySelector('#unlock-form').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const passwordInput = document.querySelector('#unlock-password');
+  const lockError = document.querySelector('#lock-error');
+  if (passwordInput.value !== '37216') {
+    lockError.classList.add('show');
+    passwordInput.select();
+    return;
+  }
+  logsUnlocked = true;
+  sessionStorage.setItem('trace-log-unlocked', 'true');
+  lockError.classList.remove('show');
+  passwordInput.value = '';
+  openSheet(selectedType);
+});
 document.querySelector('#log-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const formData = new FormData(event.target);

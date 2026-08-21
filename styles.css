@@ -36,3 +36,13 @@ td strong { font-weight: 500; }
 .empty-sheet { padding: 45px 20px; text-align: center; color: var(--muted); font: 11px var(--mono); }
 .empty-sheet .text-button { display: block; margin: 13px auto 0; color: var(--ink); }
 [hidden] { display: none !important; }
+.lock-button { border: 0; background: transparent; color: var(--muted); font: 10px var(--mono); padding: 0; }
+.lock-button:hover { color: var(--coral); }
+.lock-view { max-width: 760px; }
+.lock-panel { max-width: 500px; margin: 78px auto 0; }
+.lock-mark { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--ink); color: var(--cyan); font: 28px var(--mono); margin-bottom: 42px; }
+.lock-panel h1 { margin-bottom: 20px; }
+.lock-panel p { color: var(--muted); font-size: 13px; margin: 0 0 36px; }
+#unlock-form { display: grid; gap: 22px; }
+.lock-error { display: none; color: var(--coral); font: 10px var(--mono); }
+.lock-error.show { display: block; }
