@@ -19,7 +19,7 @@
         </a>
         <div class="sidebar-label">Workspace</div>
         <nav class="nav-list" aria-label="Primary navigation">
-          <button class="nav-item active" type="button" data-view="home"><span class="nav-icon grid-icon"></span>Overview <span class="nav-count">06</span></button>
+          <button class="nav-item active" type="button" data-view="home"><span class="nav-icon grid-icon"></span>Overview <span class="nav-count" id="total-count">00</span></button>
           <button class="nav-item" type="button" data-view="timeline"><span class="nav-icon pulse-icon"></span>Timeline</button>
           <button class="nav-item" type="button" data-view="insights"><span class="nav-icon bars-icon"></span>Insights</button>
         </nav>
@@ -31,6 +31,7 @@
           <button type="button" data-type="Portfolio"><i class="dot amber"></i>Portfolio</button>
           <button type="button" data-type="Parts"><i class="dot coral"></i>Parts</button>
           <button type="button" data-type="Parts order"><i class="dot blue"></i>Parts order</button>
+          <button type="button" data-type="Meetings"><i class="dot meeting"></i>Meetings</button>
         </div>
         <div class="sidebar-bottom">
           <div class="sync-status"><span class="status-light"></span><span><strong>All synced</strong><small>Just now</small></span></div>
@@ -62,11 +63,12 @@
             <button class="type-card portfolio" type="button" data-type="Portfolio"><span class="card-arrow">↗</span><span class="type-symbol frame-symbol">[ ]</span><span class="type-name">Portfolio</span><span class="type-description">Work worth remembering</span></button>
             <button class="type-card parts" type="button" data-type="Parts"><span class="card-arrow">↗</span><span class="type-symbol parts-symbol">+ +</span><span class="type-name">Parts</span><span class="type-description">Components, inventory &amp; notes</span></button>
             <button class="type-card order" type="button" data-type="Parts order"><span class="card-arrow">↗</span><span class="type-symbol order-symbol">→</span><span class="type-name">Parts order</span><span class="type-description">Purchases, shipments &amp; receipts</span></button>
+            <button class="type-card meetings" type="button" data-type="Meetings"><span class="card-arrow">↗</span><span class="type-symbol meeting-symbol">••</span><span class="type-name">Meetings</span><span class="type-description">Notes, decisions &amp; next steps</span></button>
           </div>
 
           <div class="bottom-grid">
-            <section class="recent-section"><div class="section-heading"><h2>Recent activity</h2><button class="text-button" type="button">View timeline <span>→</span></button></div><div class="activity-list"><article><span class="activity-dot cyan"></span><div><strong>Refactored auth middleware</strong><p>Software <span>·</span> 34 minutes ago</p></div><span class="activity-arrow">↗</span></article><article><span class="activity-dot violet"></span><div><strong>Updated enclosure v2 dimensions</strong><p>CAD <span>·</span> Yesterday</p></div><span class="activity-arrow">↗</span></article><article><span class="activity-dot lime"></span><div><strong>Sent intro to M. Chen</strong><p>Outreach <span>·</span> Aug 19</p></div><span class="activity-arrow">↗</span></article></div></section>
-            <aside class="streak-panel"><span class="mini-label">LOGGING STREAK</span><div class="streak-number">12<span>days</span></div><div class="streak-bars"><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="filled"></i><i class="current"></i><i></i><i></i><i></i></div><p>Keep the signal going.</p></aside>
+            <section class="recent-section"><div class="section-heading"><h2>Recent activity</h2><button class="text-button" id="timeline-button" type="button">View timeline <span>→</span></button></div><div class="activity-list" id="activity-list"></div></section>
+            <aside class="streak-panel"><span class="mini-label">LOGGING STREAK</span><div class="streak-number" id="streak-number">0<span>days</span></div><div class="streak-bars" id="streak-bars"></div><p id="streak-copy">Start your first entry.</p></aside>
           </div>
         </section>
 
@@ -74,6 +76,14 @@
           <button class="back-button" type="button" id="back-button">← Back to log types</button>
           <div class="form-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>NEW ENTRY</div><h1>Log <span id="form-type">Software</span></h1></div><span class="form-date">AUG 21, 2026</span></div>
           <form id="log-form"><label>Title<input id="entry-title" name="title" placeholder="Give this entry a name" required /></label><label>What happened?<textarea name="details" rows="6" placeholder="Capture the useful details..." required></textarea></label><div class="form-row"><label>Project / context<input name="context" placeholder="e.g. Atlas, personal" /></label><label>Time spent<select name="time"><option>15 minutes</option><option>30 minutes</option><option>1 hour</option><option>2+ hours</option></select></label></div><button class="save-button" type="submit">Save entry <span>↗</span></button></form>
+        </section>
+
+        <section class="content-wrap sheet-view" id="sheet-view" hidden>
+          <button class="back-button" type="button" id="sheet-back">← Back to overview</button>
+          <div class="sheet-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>LOGBOOK / TABLE VIEW</div><h1 id="sheet-title">Software <span>log</span></h1></div><button class="save-button compact-save" type="button" id="sheet-new">New entry <span>+</span></button></div>
+          <div class="sheet-tabs" id="sheet-tabs" role="tablist"></div>
+          <div class="sheet-toolbar"><span id="sheet-count">0 entries</span><span class="sheet-hint">Stored in this browser</span></div>
+          <div class="table-wrap"><table><thead><tr><th>Title</th><th>Details</th><th>Context</th><th>Time</th><th>Date</th><th></th></tr></thead><tbody id="sheet-body"></tbody></table><div class="empty-sheet" id="empty-sheet" hidden>No entries in this log yet.<button class="text-button" type="button" id="empty-new">Create the first one <span>→</span></button></div></div>
         </section>
       </main>
     </div>
