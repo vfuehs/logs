@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101214" />
+    <title>Logs / Log what matters</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="Logs home">
+          <span class="brand-mark"><span></span><span></span><span></span></span>
+          <span>logs</span>
+        </a>
+        <div class="sidebar-label">Workspace</div>
+        <nav class="nav-list" aria-label="Primary navigation">
+          <button class="nav-item active" type="button" data-view="home"><span class="nav-icon grid-icon"></span>Overview <span class="nav-count" id="total-count">00</span></button>
+          <button class="nav-item" type="button" data-view="timeline"><span class="nav-icon pulse-icon"></span>Timeline</button>
+          <button class="nav-item" type="button" data-view="insights"><span class="nav-icon bars-icon"></span>Insights</button>
+        </nav>
+        <div class="sidebar-label log-label">Log types</div>
+        <div class="type-links">
+          <button type="button" data-type="Software"><i class="dot cyan"></i>Software</button>
+          <button type="button" data-type="CAD"><i class="dot violet"></i>CAD</button>
+          <button type="button" data-type="Outreach"><i class="dot lime"></i>Outreach</button>
+          <button type="button" data-type="Portfolio"><i class="dot amber"></i>Portfolio</button>
+          <button type="button" data-type="Parts"><i class="dot coral"></i>Parts</button>
+          <button type="button" data-type="Parts order"><i class="dot blue"></i>Parts order</button>
+          <button type="button" data-type="Meetings"><i class="dot meeting"></i>Meetings</button>
+        </div>
+        <div class="sidebar-bottom">
+          <div class="sync-status"><span class="status-light"></span><span><strong>All synced</strong><small>Just now</small></span></div>
+          <button class="profile" type="button" aria-label="Open profile"><span class="avatar">VF</span><span><strong>vfuehs</strong><small>Personal workspace</small></span><span class="more">...</span></button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="breadcrumb"><span>Workspace</span><b>/</b><span class="muted">Overview</span></div>
+          <div class="top-actions"><span class="date-stamp">THU, AUG 21, 2026</span><button class="icon-button" type="button" aria-label="Search"><span class="search-icon"></span></button><button class="icon-button" type="button" aria-label="Notifications"><span class="bell-icon"></span><em></em></button></div>
+        </header>
+
+        <section class="content-wrap" id="home-view">
+          <div class="welcome-row">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span>PERSONAL LOGBOOK / 01</div>
+              <h1>What are you<br /><span>working on?</span></h1>
+              <p class="intro">A quiet place to capture progress, decisions,<br class="desktop-only" /> and the useful details in between.</p>
+            </div>
+            <div class="day-note"><span class="day-number">21</span><span>THU<br />AUG 2026</span></div>
+          </div>
+
+          <div class="section-heading"><h2>Choose a log type</h2><span>SELECT ONE TO START</span></div>
+          <div class="type-grid">
+            <button class="type-card software" type="button" data-type="Software"><span class="card-arrow">↗</span><span class="type-symbol code-symbol">&lt;/&gt;</span><span class="type-name">Software</span><span class="type-description">Builds, bugs &amp; breakthroughs</span></button>
+            <button class="type-card cad" type="button" data-type="CAD"><span class="card-arrow">↗</span><span class="type-symbol cube-symbol">◇</span><span class="type-name">CAD</span><span class="type-description">Designs, iterations &amp; models</span></button>
+            <button class="type-card outreach" type="button" data-type="Outreach"><span class="card-arrow">↗</span><span class="type-symbol wave-symbol">⌁</span><span class="type-name">Outreach</span><span class="type-description">People, conversations &amp; follow-ups</span></button>
+            <button class="type-card portfolio" type="button" data-type="Portfolio"><span class="card-arrow">↗</span><span class="type-symbol frame-symbol">[ ]</span><span class="type-name">Portfolio</span><span class="type-description">Work worth remembering</span></button>
+            <button class="type-card parts" type="button" data-type="Parts"><span class="card-arrow">↗</span><span class="type-symbol parts-symbol">+ +</span><span class="type-name">Parts</span><span class="type-description">Components, inventory &amp; notes</span></button>
+            <button class="type-card order" type="button" data-type="Parts order"><span class="card-arrow">↗</span><span class="type-symbol order-symbol">→</span><span class="type-name">Parts order</span><span class="type-description">Purchases, shipments &amp; receipts</span></button>
+            <button class="type-card meetings" type="button" data-type="Meetings"><span class="card-arrow">↗</span><span class="type-symbol meeting-symbol">••</span><span class="type-name">Meetings</span><span class="type-description">Notes, decisions &amp; next steps</span></button>
+          </div>
+
+          <div class="bottom-grid">
+            <section class="recent-section"><div class="section-heading"><h2>Recent activity</h2><button class="text-button" id="timeline-button" type="button">View timeline <span>→</span></button></div><div class="activity-list" id="activity-list"></div></section>
+            <aside class="streak-panel"><span class="mini-label">LOGGING STREAK</span><div class="streak-number" id="streak-number">0<span>days</span></div><div class="streak-bars" id="streak-bars"></div><p id="streak-copy">Start your first entry.</p></aside>
+          </div>
+        </section>
+
+        <section class="content-wrap form-view" id="form-view" hidden>
+          <button class="back-button" type="button" id="back-button">← Back to log types</button>
+          <div class="form-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>NEW ENTRY</div><h1>Log <span id="form-type">Software</span></h1></div><span class="form-date">AUG 21, 2026</span></div>
+          <form id="log-form"><div id="form-fields"></div><button class="save-button" type="submit">Save entry <span>↗</span></button></form>
+        </section>
+
+        <section class="content-wrap sheet-view" id="sheet-view" hidden>
+          <button class="back-button" type="button" id="sheet-back">← Back to overview</button>
+          <div class="sheet-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>LOGBOOK / TABLE VIEW</div><h1 id="sheet-title">Software <span>log</span></h1></div><button class="save-button compact-save" type="button" id="sheet-new">New entry <span>+</span></button></div>
+          <div class="sheet-tabs" id="sheet-tabs" role="tablist"></div>
+          <div class="sheet-toolbar"><span id="sheet-count">0 entries</span><span class="sheet-hint">Stored in this browser</span></div>
+          <div class="table-wrap"><table><thead><tr><th>Title</th><th>Details</th><th>Context</th><th>Time</th><th>Date</th><th></th></tr></thead><tbody id="sheet-body"></tbody></table><div class="empty-sheet" id="empty-sheet" hidden>No entries in this log yet.<button class="text-button" type="button" id="empty-new">Create the first one <span>→</span></button></div></div>
+        </section>
+
+        <section class="content-wrap lock-view" id="lock-view" hidden>
+          <div class="lock-panel">
+            <div class="lock-mark">+</div>
+            <div class="eyebrow"><span class="eyebrow-line"></span>PRIVATE LOGBOOK</div>
+            <h1>Enter your<br /><span>access code.</span></h1>
+            <p>All saved logs are locked behind our password.</p>
+            <form id="unlock-form"><label>Password<input id="unlock-password" type="password" inputmode="numeric" autocomplete="current-password" maxlength="5" placeholder="5 digits" required /></label><button class="save-button" type="submit">Unlock logs <span>↗</span></button><div class="lock-error" id="lock-error" role="alert">That password did not match.</div></form>
+          </div>
+        </section>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status">Entry saved to your log.</div>
+    <script src="app.js"></script>
+  </body>
+</html>
