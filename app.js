@@ -90,6 +90,19 @@ let logsUnlocked = sessionStorage.getItem('trace-log-unlocked') === 'true';
 let deletedEntries = JSON.parse(sessionStorage.getItem(deletedKey) || '[]');
 let entries = [];
 
+function setConnectionState(error) {
+  const notice = document.querySelector('#connection-notice');
+  const message = document.querySelector('#connection-message');
+  const syncStatus = document.querySelector('.sync-status strong');
+  notice.hidden = !error;
+  if (error) {
+    message.textContent = error.message || 'Check your Supabase URL, key, table, and RLS policies.';
+    syncStatus.textContent = 'Connection issue';
+  } else {
+    syncStatus.textContent = 'All synced';
+  }
+}
+
 async function loadEntries() {
   try {
     const { data, error } = await supabaseClient.from(databaseTable).select('*').order('created_at', { ascending: false });
@@ -105,7 +118,10 @@ async function loadEntries() {
       createdAt: entry.created_at,
       color: entry.color || logTypeConfig[entry.type]?.color || 'cyan'
     }));
+    setConnectionState(null);
   } catch (error) {
+    entries = [];
+    setConnectionState(error);
     showToast('Could not connect to the shared log database.');
   }
 }
@@ -260,6 +276,14 @@ document.querySelector('#sheet-back').addEventListener('click', () => showOnly(h
 document.querySelector('#sheet-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#empty-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#timeline-button').addEventListener('click', () => openSheet(selectedType));
+document.querySelector('#retry-connection').addEventListener('click', async () => {
+  const retryButton = document.querySelector('#retry-connection');
+  retryButton.disabled = true;
+  await loadEntries();
+  renderActivity();
+  renderStreak();
+  retryButton.disabled = false;
+});
 document.addEventListener('keydown', (event) => {
   const target = event.target;
   const isEditing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
