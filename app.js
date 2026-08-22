@@ -1,5 +1,75 @@
-const logTypes = ['Software', 'CAD', 'Outreach', 'Portfolio', 'Parts', 'Parts order', 'Meetings'];
-const colors = ['cyan', 'violet', 'lime', 'amber', 'coral', 'blue', 'meeting'];
+const logTypeConfig = {
+  // Edit each section to change the prompts for that log type.
+  Software: {
+    color: 'cyan',
+    fields: [
+      { key: 'title', label: 'New or Bug fix', prompt: 'What did you build or fix or did you do both?', required: true },
+      { key: 'details', label: 'What changed?', prompt: 'Capture the change, bug, breakthrough, or next step...', type: 'textarea', required: true },
+      { key: 'status', label: 'Current status', type: 'select', options: ['In progress', 'Done'] },
+    ]
+  },
+  CAD: {
+    color: 'violet',
+    fields: [
+      { key: 'title', label: 'Design focus', prompt: 'What did you design?', required: true },
+      { key: 'details', label: 'What did you iterate?', prompt: 'Capture the iteration, measurements, or design decision...', type: 'textarea', required: true },
+      { key: 'material', label: 'Material or process', prompt: 'e.g. PLA, aluminum, CNC' },
+      { key: 'revision', label: 'Revision', prompt: 'e.g. v2.1, prototype B' },
+      { key: 'context', label: 'Model / project', prompt: 'e.g. enclosure, bracket, client model' }
+    ]
+  },
+  Outreach: {
+    color: 'lime',
+    fields: [
+      { key: 'title', label: 'Contact or organization', prompt: 'Who did you connect with?', required: true },
+      { key: 'details', label: 'What happened?', prompt: 'Capture the conversation, response, or follow-up...', type: 'textarea', required: true },
+      { key: 'followUp', label: 'Follow-up date', prompt: 'e.g. Friday, Sep 4' },
+      { key: 'nextStep', label: 'Next step', prompt: 'What needs to happen next?' },
+      { key: 'context', label: 'Relationship / event', prompt: 'e.g. company, contact, event' }
+    ]
+  },
+  Portfolio: {
+    color: 'amber',
+    fields: [
+      { key: 'title', label: 'Work sample', prompt: 'What work is worth remembering?', required: true },
+      { key: 'details', label: 'Why does it matter?', prompt: 'Capture what you made, learned, or want to show...', type: 'textarea', required: true },
+      { key: 'achievement', label: 'Strongest result', prompt: 'What result or detail should stand out?' },
+      { key: 'link', label: 'Link', prompt: 'e.g. URL, file path, or repository' },
+      { key: 'context', label: 'Collection / project', prompt: 'e.g. case study, project, application' }
+    ]
+  },
+  Parts: {
+    color: 'coral',
+    fields: [
+      { key: 'title', label: 'Component', prompt: 'Which component needs a note?', required: true },
+      { key: 'details', label: 'Inventory note', prompt: 'Capture the part, quantity, location, or compatibility note...', type: 'textarea', required: true },
+      { key: 'partNumber', label: 'Part number', prompt: 'e.g. M3-014, 608ZZ' },
+      { key: 'quantity', label: 'Quantity', prompt: 'How many are available?' },
+      { key: 'context', label: 'Assembly / location', prompt: 'e.g. bin A3, robot arm, assembly' }
+    ]
+  },
+  'Parts order': {
+    color: 'blue',
+    fields: [
+      { key: 'title', label: 'Order item', prompt: 'What did you order?', required: true },
+      { key: 'details', label: 'Order details', prompt: 'Capture the vendor, order status, cost, or tracking detail...', type: 'textarea', required: true },
+      { key: 'vendor', label: 'Vendor', prompt: 'Who is supplying it?' },
+      { key: 'orderStatus', label: 'Order status', type: 'select', options: ['To order', 'Ordered', 'Shipped', 'Received'] },
+      { key: 'context', label: 'Vendor / project', prompt: 'e.g. vendor, purchase order, project' }
+    ]
+  },
+  Meetings: {
+    color: 'meeting',
+    fields: [
+      { key: 'title', label: 'Meeting topic', prompt: 'What was the meeting about?', required: true },
+      { key: 'details', label: 'Decisions and next steps', prompt: 'Capture the decisions, action items, and owners...', type: 'textarea', required: true },
+      { key: 'attendees', label: 'Attendees', prompt: 'Who was there?' },
+      { key: 'nextStep', label: 'Next meeting or follow-up', prompt: 'What happens next, and when?' },
+      { key: 'context', label: 'People / project', prompt: 'e.g. team, client, project' }
+    ]
+  }
+};
+const logTypes = Object.keys(logTypeConfig);
 const storageKey = 'trace-log-entries';
 const deletedKey = 'trace-log-deleted-entries';
 const homeView = document.querySelector('#home-view');
@@ -7,7 +77,8 @@ const formView = document.querySelector('#form-view');
 const sheetView = document.querySelector('#sheet-view');
 const lockView = document.querySelector('#lock-view');
 const formType = document.querySelector('#form-type');
-const entryTitle = document.querySelector('#entry-title');
+const logForm = document.querySelector('#log-form');
+const formFields = document.querySelector('#form-fields');
 const toast = document.querySelector('#toast');
 let selectedType = 'Software';
 let logsUnlocked = sessionStorage.getItem('trace-log-unlocked') === 'true';
@@ -51,20 +122,30 @@ function showOnly(view) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+function renderFormFields(type) {
+  formFields.innerHTML = logTypeConfig[type].fields.map((field) => {
+    const required = field.required ? ' required' : '';
+    const prompt = field.prompt ? ` placeholder="${escapeHtml(field.prompt)}"` : '';
+    if (field.type === 'textarea') {
+      return `<label>${escapeHtml(field.label)}<textarea name="${escapeHtml(field.key)}" rows="6"${prompt}${required}></textarea></label>`;
+    }
+    if (field.type === 'select') {
+      return `<label>${escapeHtml(field.label)}<select name="${escapeHtml(field.key)}">${field.options.map((option) => `<option>${escapeHtml(option)}</option>`).join('')}</select></label>`;
+    }
+    return `<label>${escapeHtml(field.label)}<input name="${escapeHtml(field.key)}"${prompt}${required} /></label>`;
+  }).join('');
+}
+
 function openLogForm(type) {
   selectedType = type;
   formType.textContent = type;
+  renderFormFields(type);
   showOnly(formView);
-  entryTitle.focus();
+  formFields.querySelector('input, textarea, select').focus();
 }
 
 function openSheet(type) {
   selectedType = type;
-  if (!logsUnlocked) {
-    showOnly(lockView);
-    document.querySelector('#unlock-password').focus();
-    return;
-  }
   renderSheet();
   showOnly(sheetView);
 }
@@ -146,12 +227,6 @@ document.querySelector('#sheet-back').addEventListener('click', () => showOnly(h
 document.querySelector('#sheet-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#empty-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#timeline-button').addEventListener('click', () => openSheet(selectedType));
-document.querySelector('#lock-logs').addEventListener('click', () => {
-  logsUnlocked = false;
-  sessionStorage.removeItem('trace-log-unlocked');
-  showOnly(lockView);
-  document.querySelector('#unlock-password').focus();
-});
 document.addEventListener('keydown', (event) => {
   const target = event.target;
   const isEditing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
@@ -173,16 +248,17 @@ document.querySelector('#unlock-form').addEventListener('submit', (event) => {
   sessionStorage.setItem('trace-log-unlocked', 'true');
   lockError.classList.remove('show');
   passwordInput.value = '';
-  openSheet(selectedType);
+  showOnly(homeView);
 });
-document.querySelector('#log-form').addEventListener('submit', (event) => {
+logForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const formData = new FormData(event.target);
-  const title = String(formData.get('title')).trim();
-  const details = String(formData.get('details')).trim();
+  const values = Object.fromEntries(logTypeConfig[selectedType].fields.map((field) => [field.key, String(formData.get(field.key) || '').trim()]));
+  const title = values.title;
+  const details = values.details;
   if (!title || !details) return;
   const entries = getEntries();
-  entries.push({ id: crypto.randomUUID(), type: selectedType, title, details, context: String(formData.get('context')).trim(), time: String(formData.get('time')), createdAt: new Date().toISOString(), color: colors[logTypes.indexOf(selectedType)] });
+  entries.push({ id: crypto.randomUUID(), type: selectedType, title, details, context: values.context || '', time: values.time || 'Not specified', values, createdAt: new Date().toISOString(), color: logTypeConfig[selectedType].color });
   saveEntries(entries);
   event.target.reset();
   renderActivity();
@@ -200,3 +276,7 @@ document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('
 
 renderActivity();
 renderStreak();
+if (!logsUnlocked) {
+  showOnly(lockView);
+  document.querySelector('#unlock-password').focus();
+}
