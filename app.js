@@ -70,6 +70,11 @@ const logTypeConfig = {
   }
 };
 const logTypes = Object.keys(logTypeConfig);
+const supabaseClient = window.supabase.createClient(
+  'https://kbaxgocmumrzlhynrquv.supabase.co',
+  'sb_publishable_QAUBzkbVoQg9a0FUQGtJEQ_nUSPz7f9'
+);
+const databaseTable = 'logs';
 const storageKey = 'trace-log-entries';
 const deletedKey = 'trace-log-deleted-entries';
 const homeView = document.querySelector('#home-view');
@@ -83,18 +88,30 @@ const toast = document.querySelector('#toast');
 let selectedType = 'Software';
 let logsUnlocked = sessionStorage.getItem('trace-log-unlocked') === 'true';
 let deletedEntries = JSON.parse(sessionStorage.getItem(deletedKey) || '[]');
+let entries = [];
 
-function getEntries() {
+async function loadEntries() {
   try {
-    const entries = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    return Array.isArray(entries) ? entries : [];
+    const { data, error } = await supabaseClient.from(databaseTable).select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    entries = data.map((entry) => ({
+      id: entry.id,
+      type: entry.type,
+      title: entry.title,
+      details: entry.details,
+      context: entry.values?.context || '',
+      time: entry.values?.time || 'Not specified',
+      values: entry.values || {},
+      createdAt: entry.created_at,
+      color: entry.color || logTypeConfig[entry.type]?.color || 'cyan'
+    }));
   } catch (error) {
-    return [];
+    showToast('Could not connect to the shared log database.');
   }
 }
 
-function saveEntries(entries) {
-  localStorage.setItem(storageKey, JSON.stringify(entries));
+function getEntries() {
+  return entries;
 }
 
 function escapeHtml(value) {
@@ -152,13 +169,13 @@ function openSheet(type) {
 
 function renderActivity() {
   const activityList = document.querySelector('#activity-list');
-  const entries = getEntries().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  document.querySelector('#total-count').textContent = String(entries.length).padStart(2, '0');
-  if (!entries.length) {
+  const sortedEntries = getEntries().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  document.querySelector('#total-count').textContent = String(sortedEntries.length).padStart(2, '0');
+  if (!sortedEntries.length) {
     activityList.innerHTML = '<div class="empty-activity">Your saved entries will appear here.</div>';
     return;
   }
-  activityList.innerHTML = entries.slice(0, 4).map((entry) => `<article><span class="activity-dot ${entry.color}"></span><div><strong>${escapeHtml(entry.title)}</strong><p>${escapeHtml(entry.type)} <span>·</span> ${timeAgo(entry.createdAt)}</p></div><button class="activity-arrow" type="button" data-open-sheet="${escapeHtml(entry.type)}" aria-label="Open ${escapeHtml(entry.type)} log">↗</button></article>`).join('');
+  activityList.innerHTML = sortedEntries.slice(0, 4).map((entry) => `<article><span class="activity-dot ${entry.color}"></span><div><strong>${escapeHtml(entry.title)}</strong><p>${escapeHtml(entry.type)} <span>·</span> ${timeAgo(entry.createdAt)}</p></div><button class="activity-arrow" type="button" data-open-sheet="${escapeHtml(entry.type)}" aria-label="Open ${escapeHtml(entry.type)} log">↗</button></article>`).join('');
   activityList.querySelectorAll('[data-open-sheet]').forEach((button) => button.addEventListener('click', () => openSheet(button.dataset.openSheet)));
 }
 
@@ -191,27 +208,39 @@ function renderSheet() {
 }
 
 function deleteEntry(id) {
-  const entries = getEntries();
-  const deletedEntry = entries.find((entry) => entry.id === id);
+  const deletedEntry = getEntries().find((entry) => entry.id === id);
   if (!deletedEntry) return;
-  deletedEntries.push(deletedEntry);
-  sessionStorage.setItem(deletedKey, JSON.stringify(deletedEntries));
-  saveEntries(entries.filter((entry) => entry.id !== id));
-  renderSheet();
-  renderActivity();
-  renderStreak();
-  showToast('Entry removed. Press Ctrl+Z to restore it.');
+  supabaseClient.from(databaseTable).delete().eq('id', id).then(({ error }) => {
+    if (error) {
+      showToast('Could not remove that entry.');
+      return;
+    }
+    deletedEntries.push(deletedEntry);
+    sessionStorage.setItem(deletedKey, JSON.stringify(deletedEntries));
+    entries = entries.filter((entry) => entry.id !== id);
+    renderSheet();
+    renderActivity();
+    renderStreak();
+    showToast('Entry removed. Press Ctrl+Z to restore it.');
+  });
 }
 
 function undoDelete() {
   const entry = deletedEntries.pop();
   if (!entry) return;
-  saveEntries([...getEntries(), entry]);
-  sessionStorage.setItem(deletedKey, JSON.stringify(deletedEntries));
-  renderSheet();
-  renderActivity();
-  renderStreak();
-  showToast('Entry restored to your log.');
+  supabaseClient.from(databaseTable).insert({ id: entry.id, type: entry.type, title: entry.title, details: entry.details, values: entry.values, color: entry.color, created_at: entry.createdAt }).then(({ error }) => {
+    if (error) {
+      deletedEntries.push(entry);
+      showToast('Could not restore that entry.');
+      return;
+    }
+    entries = [...getEntries(), entry];
+    sessionStorage.setItem(deletedKey, JSON.stringify(deletedEntries));
+    renderSheet();
+    renderActivity();
+    renderStreak();
+    showToast('Entry restored to your log.');
+  });
 }
 
 function showToast(message) {
@@ -221,7 +250,11 @@ function showToast(message) {
 }
 
 document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', () => openLogForm(button.dataset.type)));
-document.querySelectorAll('.type-links button').forEach((button) => button.addEventListener('click', () => openSheet(button.dataset.type)));
+document.querySelector('#log-picker').addEventListener('change', (event) => {
+  if (!event.target.value) return;
+  openSheet(event.target.value);
+  event.target.value = '';
+});
 document.querySelector('#back-button').addEventListener('click', () => showOnly(homeView));
 document.querySelector('#sheet-back').addEventListener('click', () => showOnly(homeView));
 document.querySelector('#sheet-new').addEventListener('click', () => openLogForm(selectedType));
@@ -257,14 +290,19 @@ logForm.addEventListener('submit', (event) => {
   const title = values.title;
   const details = values.details;
   if (!title || !details) return;
-  const entries = getEntries();
-  entries.push({ id: crypto.randomUUID(), type: selectedType, title, details, context: values.context || '', time: values.time || 'Not specified', values, createdAt: new Date().toISOString(), color: logTypeConfig[selectedType].color });
-  saveEntries(entries);
-  event.target.reset();
-  renderActivity();
-  renderStreak();
-  showToast(`${selectedType} entry saved to your log.`);
-  openSheet(selectedType);
+  const newEntry = { id: crypto.randomUUID(), type: selectedType, title, details, context: values.context || '', time: values.time || 'Not specified', values, createdAt: new Date().toISOString(), color: logTypeConfig[selectedType].color };
+  supabaseClient.from(databaseTable).insert({ id: newEntry.id, type: newEntry.type, title: newEntry.title, details: newEntry.details, values: newEntry.values, color: newEntry.color, created_at: newEntry.createdAt }).select().single().then(({ error }) => {
+    if (error) {
+      showToast('Could not save entry to the shared database.');
+      return;
+    }
+    entries = [newEntry, ...getEntries()];
+    event.target.reset();
+    renderActivity();
+    renderStreak();
+    showToast(`${selectedType} entry saved to your log.`);
+    openSheet(selectedType);
+  });
 });
 document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('click', () => {
   document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active'));
@@ -274,9 +312,13 @@ document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('
   if (item.dataset.view === 'insights') showToast('Insights will appear as your log grows.');
 }));
 
-renderActivity();
-renderStreak();
-if (!logsUnlocked) {
-  showOnly(lockView);
-  document.querySelector('#unlock-password').focus();
-}
+loadEntries().then(() => {
+  renderActivity();
+  renderStreak();
+  if (!logsUnlocked) {
+    showOnly(lockView);
+    document.querySelector('#unlock-password').focus();
+  } else {
+    showOnly(homeView);
+  }
+});

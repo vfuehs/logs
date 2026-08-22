@@ -24,15 +24,7 @@
           <button class="nav-item" type="button" data-view="insights"><span class="nav-icon bars-icon"></span>Insights</button>
         </nav>
         <div class="sidebar-label log-label">Log types</div>
-        <div class="type-links">
-          <button type="button" data-type="Software"><i class="dot cyan"></i>Software</button>
-          <button type="button" data-type="CAD"><i class="dot violet"></i>CAD</button>
-          <button type="button" data-type="Outreach"><i class="dot lime"></i>Outreach</button>
-          <button type="button" data-type="Portfolio"><i class="dot amber"></i>Portfolio</button>
-          <button type="button" data-type="Parts"><i class="dot coral"></i>Parts</button>
-          <button type="button" data-type="Parts order"><i class="dot blue"></i>Parts order</button>
-          <button type="button" data-type="Meetings"><i class="dot meeting"></i>Meetings</button>
-        </div>
+        <label class="log-picker"><span class="sr-only">Check a log</span><select id="log-picker"><option value="">Check a log...</option><option>Software</option><option>CAD</option><option>Outreach</option><option>Portfolio</option><option>Parts</option><option>Parts order</option><option>Meetings</option></select></label>
         <div class="sidebar-bottom">
           <div class="sync-status"><span class="status-light"></span><span><strong>All synced</strong><small>Just now</small></span></div>
           <button class="profile" type="button" aria-label="Open profile"><span class="avatar">VF</span><span><strong>vfuehs</strong><small>Personal workspace</small></span><span class="more">...</span></button>
@@ -98,6 +90,7 @@
       </main>
     </div>
     <div class="toast" id="toast" role="status">Entry saved to your log.</div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
   </body>
 </html>
