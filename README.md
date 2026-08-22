@@ -37,6 +37,24 @@ create policy "Anyone can add logs" on public.logs for insert with check (true);
 create policy "Anyone can delete logs" on public.logs for delete using (true);
 ```
 
+If the table already exists, run this migration to enable saved category colors:
+
+```sql
+alter table public.logs add column if not exists color text;
+```
+
+If an insert returns `new row violates row-level security policy`, run this in the Supabase SQL Editor. It safely replaces the public demo policies required by this unauthenticated app:
+
+```sql
+alter table public.logs enable row level security;
+drop policy if exists "Anyone can read logs" on public.logs;
+drop policy if exists "Anyone can add logs" on public.logs;
+drop policy if exists "Anyone can delete logs" on public.logs;
+create policy "Anyone can read logs" on public.logs for select using (true);
+create policy "Anyone can add logs" on public.logs for insert with check (true);
+create policy "Anyone can delete logs" on public.logs for delete using (true);
+```
+
 The publishable key is safe to use in this browser app. These policies make the log publicly readable and editable, so add Supabase Auth and user-based policies before storing anything private.
 
 ## Forward the port in VS Code

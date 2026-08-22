@@ -228,7 +228,7 @@ function deleteEntry(id) {
   if (!deletedEntry) return;
   supabaseClient.from(databaseTable).delete().eq('id', id).then(({ error }) => {
     if (error) {
-      showToast('Could not remove that entry.');
+      showToast(databaseErrorMessage(error, 'Could not remove that entry.'));
       return;
     }
     deletedEntries.push(deletedEntry);
@@ -244,10 +244,10 @@ function deleteEntry(id) {
 function undoDelete() {
   const entry = deletedEntries.pop();
   if (!entry) return;
-  supabaseClient.from(databaseTable).insert({ id: entry.id, type: entry.type, title: entry.title, details: entry.details, values: entry.values, color: entry.color, created_at: entry.createdAt }).then(({ error }) => {
+  supabaseClient.from(databaseTable).insert({ id: entry.id, type: entry.type, title: entry.title, details: entry.details, values: entry.values, created_at: entry.createdAt }).then(({ error }) => {
     if (error) {
       deletedEntries.push(entry);
-      showToast('Could not restore that entry.');
+      showToast(databaseErrorMessage(error, 'Could not restore that entry.'));
       return;
     }
     entries = [...getEntries(), entry];
@@ -263,6 +263,12 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add('show');
   window.setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+function databaseErrorMessage(error, fallback) {
+  if (error?.code === '42501') return 'Supabase blocked this write. Add the INSERT policy from README.md.';
+  if (error?.code === 'PGRST204') return error.message;
+  return fallback;
 }
 
 document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', () => openLogForm(button.dataset.type)));
@@ -315,9 +321,9 @@ logForm.addEventListener('submit', (event) => {
   const details = values.details;
   if (!title || !details) return;
   const newEntry = { id: crypto.randomUUID(), type: selectedType, title, details, context: values.context || '', time: values.time || 'Not specified', values, createdAt: new Date().toISOString(), color: logTypeConfig[selectedType].color };
-  supabaseClient.from(databaseTable).insert({ id: newEntry.id, type: newEntry.type, title: newEntry.title, details: newEntry.details, values: newEntry.values, color: newEntry.color, created_at: newEntry.createdAt }).select().single().then(({ error }) => {
+  supabaseClient.from(databaseTable).insert({ id: newEntry.id, type: newEntry.type, title: newEntry.title, details: newEntry.details, values: newEntry.values, created_at: newEntry.createdAt }).select().single().then(({ error }) => {
     if (error) {
-      showToast('Could not save entry to the shared database.');
+      showToast(databaseErrorMessage(error, 'Could not save entry to the shared database.'));
       return;
     }
     entries = [newEntry, ...getEntries()];
