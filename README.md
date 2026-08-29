@@ -18,17 +18,19 @@ The access code is requested once when the website is first opened in a browser 
 
 ## Supabase database
 
-Entries are shared through the Supabase project configured in `app.js`. In Supabase SQL Editor, create the table and policies below before using the deployed site:
+Entries are shared through the Supabase project configured in `app.js`. The app now normalizes restored or legacy rows before rendering so a Supabase backup/restore or a re-created table is easier to recover without changing the website experience.
+
+In Supabase SQL Editor, create the table and policies below before using the deployed site:
 
 ```sql
-create table public.logs (
-	id uuid primary key,
-	type text not null,
-	title text not null,
-	details text not null,
-	values jsonb default '{}'::jsonb,
-	color text,
-	created_at timestamptz default now()
+create table if not exists public.logs (
+  id uuid primary key,
+  type text not null default 'Software',
+  title text not null,
+  details text not null,
+  values jsonb not null default '{}'::jsonb,
+  color text,
+  created_at timestamptz not null default now()
 );
 
 alter table public.logs enable row level security;
@@ -37,11 +39,17 @@ create policy "Anyone can add logs" on public.logs for insert with check (true);
 create policy "Anyone can delete logs" on public.logs for delete using (true);
 ```
 
-If the table already exists, run this migration to enable saved category colors:
+If the table already exists, run this migration to ensure the schema matches the app's restore-safe expectations:
 
 ```sql
 alter table public.logs add column if not exists color text;
+alter table public.logs alter column values set default '{}'::jsonb;
+alter table public.logs alter column values set not null;
+alter table public.logs alter column created_at set default now();
+alter table public.logs alter column created_at set not null;
 ```
+
+This app treats `values` as the canonical JSON payload for per-entry metadata such as `context` and `time`, and it normalizes any legacy or restored row shape before displaying it. That keeps the web UI unchanged while making database restoration and table recreation much easier to recover from.
 
 If an insert returns `new row violates row-level security policy`, run this in the Supabase SQL Editor. It safely replaces the public demo policies required by this unauthenticated app:
 
