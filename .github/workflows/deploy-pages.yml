@@ -4,7 +4,6 @@ name: Deploy static site to GitHub Pages
   push:
     branches:
       - main
-      - add-trace-logbook-ui
   workflow_dispatch:
 
 permissions:

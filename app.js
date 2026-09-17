@@ -13,17 +13,16 @@ const logTypeConfig = {
     fields: [
       { key: 'title', label: 'Design focus', prompt: 'What did you design?', required: true },
       { key: 'details', label: 'What did you iterate?', prompt: 'Capture the iteration, measurements, or design decision...', type: 'textarea', required: true },
-      { key: 'material', label: 'Material or process', prompt: 'e.g. PLA, aluminum, CNC' },
       { key: 'revision', label: 'Revision', prompt: 'e.g. v2.1, prototype B' },
-      { key: 'context', label: 'Model / project', prompt: 'e.g. enclosure, bracket, client model' }
+
     ]
   },
   Outreach: {
     color: 'lime',
     fields: [
       { key: 'title', label: 'Contact or organization', prompt: 'Who did you connect with?', required: true },
-      { key: 'details', label: 'What happened?', prompt: 'Capture the conversation, response, or follow-up...', type: 'textarea', required: true },
-      { key: 'followUp', label: 'Follow-up date', prompt: 'e.g. Friday, Sep 4' },
+      { key: 'details', label: 'Who did it?', prompt: 'In format "Rookie/Veteran, Name"', type: 'textarea', required: true },
+      { key: 'followUp', label: 'Date', prompt: 'e.g. Friday, Sep 4' },
       { key: 'nextStep', label: 'Next step', prompt: 'What needs to happen next?' },
       { key: 'context', label: 'Relationship / event', prompt: 'e.g. company, contact, event' }
     ]
@@ -70,13 +69,41 @@ const logTypeConfig = {
   }
 };
 const logTypes = Object.keys(logTypeConfig);
+const supabaseConfig = {
+  table: 'logs',
+  primaryKey: 'id',
+  timestampKey: 'created_at',
+  payloadShape: {
+    id: 'id',
+    type: 'type',
+    title: 'title',
+    details: 'details',
+    values: 'values',
+    color: 'color',
+    createdAt: 'created_at'
+  }
+};
 const supabaseClient = window.supabase.createClient(
   'https://kbaxgocmumrzlhynrquv.supabase.co',
   'sb_publishable_QAUBzkbVoQg9a0FUQGtJEQ_nUSPz7f9'
 );
-const databaseTable = 'logs';
+const databaseTable = supabaseConfig.table;
 const storageKey = 'trace-log-entries';
 const deletedKey = 'trace-log-deleted-entries';
+const easternTimeZone = 'America/New_York';
+const easternDateFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: easternTimeZone,
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric'
+});
+const easternDateKeyFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: easternTimeZone,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
 const homeView = document.querySelector('#home-view');
 const formView = document.querySelector('#form-view');
 const sheetView = document.querySelector('#sheet-view');
@@ -90,22 +117,28 @@ let logsUnlocked = sessionStorage.getItem('trace-log-unlocked') === 'true';
 let deletedEntries = JSON.parse(sessionStorage.getItem(deletedKey) || '[]');
 let entries = [];
 
+function setConnectionState(error) {
+  const notice = document.querySelector('#connection-notice');
+  const message = document.querySelector('#connection-message');
+  const syncStatus = document.querySelector('.sync-status strong');
+  notice.hidden = !error;
+  if (error) {
+    message.textContent = error.message || 'Check your Supabase URL, key, table, and RLS policies.';
+    syncStatus.textContent = 'Connection issue';
+  } else {
+    syncStatus.textContent = 'All synced';
+  }
+}
+
 async function loadEntries() {
   try {
     const { data, error } = await supabaseClient.from(databaseTable).select('*').order('created_at', { ascending: false });
     if (error) throw error;
-    entries = data.map((entry) => ({
-      id: entry.id,
-      type: entry.type,
-      title: entry.title,
-      details: entry.details,
-      context: entry.values?.context || '',
-      time: entry.values?.time || 'Not specified',
-      values: entry.values || {},
-      createdAt: entry.created_at,
-      color: entry.color || logTypeConfig[entry.type]?.color || 'cyan'
-    }));
+    entries = (Array.isArray(data) ? data : []).map((entry) => normalizeSupabaseRow(entry));
+    setConnectionState(null);
   } catch (error) {
+    entries = [];
+    setConnectionState(error);
     showToast('Could not connect to the shared log database.');
   }
 }
@@ -114,12 +147,68 @@ function getEntries() {
   return entries;
 }
 
+function normalizeSupabaseRow(row = {}) {
+  const type = typeof row.type === 'string' && row.type ? row.type : 'Software';
+  const sourceValues = row.values && typeof row.values === 'object' && !Array.isArray(row.values) ? row.values : {};
+  const values = {
+    ...sourceValues,
+    ...(typeof sourceValues.context === 'undefined' && typeof row.context === 'string' ? { context: row.context } : {}),
+    ...(typeof sourceValues.time === 'undefined' && typeof row.time === 'string' ? { time: row.time } : {})
+  };
+  const title = typeof row.title === 'string' && row.title.trim() ? row.title.trim() : 'Untitled entry';
+  const details = typeof row.details === 'string' ? row.details : '';
+  const createdAt = row.created_at || row.createdAt || new Date().toISOString();
+  const color = row.color || logTypeConfig[type]?.color || 'cyan';
+
+  return {
+    id: row.id || crypto.randomUUID(),
+    type,
+    title,
+    details,
+    context: typeof values.context === 'string' ? values.context : '',
+    time: typeof values.time === 'string' ? values.time : 'Not specified',
+    values,
+    createdAt,
+    color
+  };
+}
+
+function buildSupabaseRecord(entry) {
+  const sourceValues = entry.values && typeof entry.values === 'object' && !Array.isArray(entry.values) ? entry.values : {};
+  return {
+    id: entry.id,
+    type: entry.type,
+    title: entry.title,
+    details: entry.details,
+    values: sourceValues,
+    color: entry.color || logTypeConfig[entry.type]?.color || 'cyan',
+    created_at: entry.createdAt || new Date().toISOString()
+  };
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
 }
 
+function getEasternDateParts(value = new Date()) {
+  return Object.fromEntries(easternDateFormatter.formatToParts(value).filter(({ type }) => type !== 'literal').map(({ type, value: partValue }) => [type, partValue]));
+}
+
+function getEasternDateKey(value) {
+  const parts = Object.fromEntries(easternDateKeyFormatter.formatToParts(value).filter(({ type }) => type !== 'literal').map(({ type, value: partValue }) => [type, partValue]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
 function formatDate(value) {
-  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value));
+  return easternDateFormatter.format(new Date(value)).replace(/^\w+,\s*/, '');
+}
+
+function updateDateDisplays() {
+  const parts = getEasternDateParts();
+  document.querySelector('#date-stamp').textContent = `${parts.weekday}, ${parts.month} ${parts.day}, ${parts.year}`.toUpperCase();
+  document.querySelector('#day-number').textContent = parts.day;
+  document.querySelector('#day-label').innerHTML = `${parts.weekday.toUpperCase()}<br />${parts.month.toUpperCase()} ${parts.year}`;
+  document.querySelector('#form-date').textContent = `${parts.month} ${parts.day}, ${parts.year}`.toUpperCase();
 }
 
 function timeAgo(value) {
@@ -180,12 +269,12 @@ function renderActivity() {
 }
 
 function renderStreak() {
-  const dates = new Set(getEntries().map((entry) => new Date(entry.createdAt).toISOString().slice(0, 10)));
+  const dates = new Set(getEntries().map((entry) => getEasternDateKey(entry.createdAt)));
   let streak = 0;
   const cursor = new Date();
-  while (dates.has(cursor.toISOString().slice(0, 10))) {
+  while (dates.has(getEasternDateKey(cursor))) {
     streak += 1;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor.setUTCDate(cursor.getUTCDate() - 1);
   }
   document.querySelector('#streak-number').innerHTML = `${streak}<span>day${streak === 1 ? '' : 's'}</span>`;
   document.querySelector('#streak-copy').textContent = streak ? 'Keep the signal going.' : 'Start your first entry.';
@@ -212,7 +301,7 @@ function deleteEntry(id) {
   if (!deletedEntry) return;
   supabaseClient.from(databaseTable).delete().eq('id', id).then(({ error }) => {
     if (error) {
-      showToast('Could not remove that entry.');
+      showToast(databaseErrorMessage(error, 'Could not remove that entry.'));
       return;
     }
     deletedEntries.push(deletedEntry);
@@ -228,10 +317,10 @@ function deleteEntry(id) {
 function undoDelete() {
   const entry = deletedEntries.pop();
   if (!entry) return;
-  supabaseClient.from(databaseTable).insert({ id: entry.id, type: entry.type, title: entry.title, details: entry.details, values: entry.values, color: entry.color, created_at: entry.createdAt }).then(({ error }) => {
+  supabaseClient.from(databaseTable).insert(buildSupabaseRecord(entry)).then(({ error }) => {
     if (error) {
       deletedEntries.push(entry);
-      showToast('Could not restore that entry.');
+      showToast(databaseErrorMessage(error, 'Could not restore that entry.'));
       return;
     }
     entries = [...getEntries(), entry];
@@ -249,6 +338,12 @@ function showToast(message) {
   window.setTimeout(() => toast.classList.remove('show'), 2800);
 }
 
+function databaseErrorMessage(error, fallback) {
+  if (error?.code === '42501') return 'Supabase blocked this write. Add the INSERT policy from README.md.';
+  if (error?.code === 'PGRST204') return error.message;
+  return fallback;
+}
+
 document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', () => openLogForm(button.dataset.type)));
 document.querySelector('#log-picker').addEventListener('change', (event) => {
   if (!event.target.value) return;
@@ -260,6 +355,14 @@ document.querySelector('#sheet-back').addEventListener('click', () => showOnly(h
 document.querySelector('#sheet-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#empty-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#timeline-button').addEventListener('click', () => openSheet(selectedType));
+document.querySelector('#retry-connection').addEventListener('click', async () => {
+  const retryButton = document.querySelector('#retry-connection');
+  retryButton.disabled = true;
+  await loadEntries();
+  renderActivity();
+  renderStreak();
+  retryButton.disabled = false;
+});
 document.addEventListener('keydown', (event) => {
   const target = event.target;
   const isEditing = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
@@ -283,6 +386,8 @@ document.querySelector('#unlock-form').addEventListener('submit', (event) => {
   passwordInput.value = '';
   showOnly(homeView);
 });
+updateDateDisplays();
+window.setInterval(updateDateDisplays, 60000);
 logForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const formData = new FormData(event.target);
@@ -291,12 +396,12 @@ logForm.addEventListener('submit', (event) => {
   const details = values.details;
   if (!title || !details) return;
   const newEntry = { id: crypto.randomUUID(), type: selectedType, title, details, context: values.context || '', time: values.time || 'Not specified', values, createdAt: new Date().toISOString(), color: logTypeConfig[selectedType].color };
-  supabaseClient.from(databaseTable).insert({ id: newEntry.id, type: newEntry.type, title: newEntry.title, details: newEntry.details, values: newEntry.values, color: newEntry.color, created_at: newEntry.createdAt }).select().single().then(({ error }) => {
+  supabaseClient.from(databaseTable).insert(buildSupabaseRecord(newEntry)).select().single().then(({ error }) => {
     if (error) {
-      showToast('Could not save entry to the shared database.');
+      showToast(databaseErrorMessage(error, 'Could not save entry to the shared database.'));
       return;
     }
-    entries = [newEntry, ...getEntries()];
+    entries = [normalizeSupabaseRow(newEntry), ...getEntries()];
     event.target.reset();
     renderActivity();
     renderStreak();

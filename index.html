@@ -34,7 +34,7 @@
       <main class="main-content">
         <header class="topbar">
           <div class="breadcrumb"><span>Workspace</span><b>/</b><span class="muted">Overview</span></div>
-          <div class="top-actions"><span class="date-stamp">THU, AUG 21, 2026</span><button class="icon-button" type="button" aria-label="Search"><span class="search-icon"></span></button><button class="icon-button" type="button" aria-label="Notifications"><span class="bell-icon"></span><em></em></button></div>
+          <div class="top-actions"><span class="date-stamp" id="date-stamp"></span><button class="icon-button" type="button" aria-label="Search"><span class="search-icon"></span></button><button class="icon-button" type="button" aria-label="Notifications"><span class="bell-icon"></span><em></em></button></div>
         </header>
 
         <section class="content-wrap" id="home-view">
@@ -44,9 +44,10 @@
               <h1>What are you<br /><span>working on?</span></h1>
               <p class="intro">A quiet place to capture progress, decisions,<br class="desktop-only" /> and the useful details in between.</p>
             </div>
-            <div class="day-note"><span class="day-number">21</span><span>THU<br />AUG 2026</span></div>
+            <div class="day-note"><span class="day-number" id="day-number"></span><span id="day-label"></span></div>
           </div>
 
+          <div class="connection-notice" id="connection-notice" hidden><strong>Shared database unavailable.</strong><span id="connection-message">Check your Supabase connection and try again.</span><button class="text-button" id="retry-connection" type="button">Retry <span>↗</span></button></div>
           <div class="section-heading"><h2>Choose a log type</h2><span>SELECT ONE TO START</span></div>
           <div class="type-grid">
             <button class="type-card software" type="button" data-type="Software"><span class="card-arrow">↗</span><span class="type-symbol code-symbol">&lt;/&gt;</span><span class="type-name">Software</span><span class="type-description">Builds, bugs &amp; breakthroughs</span></button>
@@ -66,7 +67,7 @@
 
         <section class="content-wrap form-view" id="form-view" hidden>
           <button class="back-button" type="button" id="back-button">← Back to log types</button>
-          <div class="form-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>NEW ENTRY</div><h1>Log <span id="form-type">Software</span></h1></div><span class="form-date">AUG 21, 2026</span></div>
+          <div class="form-heading"><div><div class="eyebrow"><span class="eyebrow-line"></span>NEW ENTRY</div><h1>Log <span id="form-type">Software</span></h1></div><span class="form-date" id="form-date"></span></div>
           <form id="log-form"><div id="form-fields"></div><button class="save-button" type="submit">Save entry <span>↗</span></button></form>
         </section>
 
