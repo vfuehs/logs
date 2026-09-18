@@ -39,13 +39,7 @@ const logTypeConfig = {
   },
   Parts: {
     color: 'coral',
-    fields: [
-      { key: 'title', label: 'Component', prompt: 'Which component needs a note?', required: true },
-      { key: 'details', label: 'Inventory note', prompt: 'Capture the part, quantity, location, or compatibility note...', type: 'textarea', required: true },
-      { key: 'partNumber', label: 'Part number', prompt: 'e.g. M3-014, 608ZZ' },
-      { key: 'quantity', label: 'Quantity', prompt: 'How many are available?' },
-      { key: 'context', label: 'Assembly / location', prompt: 'e.g. bin A3, robot arm, assembly' }
-    ]
+    fields: []
   },
   'Parts order': {
     color: 'blue',
@@ -155,7 +149,9 @@ function normalizeSupabaseRow(row = {}) {
     ...(typeof sourceValues.context === 'undefined' && typeof row.context === 'string' ? { context: row.context } : {}),
     ...(typeof sourceValues.time === 'undefined' && typeof row.time === 'string' ? { time: row.time } : {})
   };
-  const title = typeof row.title === 'string' && row.title.trim() ? row.title.trim() : 'Untitled entry';
+  const titleValue = typeof values.title === 'string' ? values.title.trim() : '';
+  const rowTitle = typeof row.title === 'string' ? row.title.trim() : '';
+  const title = titleValue || rowTitle || 'Untitled entry';
   const details = typeof row.details === 'string' ? row.details : '';
   const createdAt = row.created_at || row.createdAt || new Date().toISOString();
   const color = row.color || logTypeConfig[type]?.color || 'cyan';
@@ -229,6 +225,37 @@ function showOnly(view) {
 }
 
 function renderFormFields(type) {
+  if (type === 'Parts') {
+    const partNames = [...new Set(getEntries()
+      .filter((entry) => entry.type === 'Parts')
+      .map((entry) => entry.title)
+      .filter(Boolean))].sort((first, second) => first.localeCompare(second));
+    formFields.innerHTML = `<label>Availability<select name="inventoryStatus" id="parts-availability" required><option value="">Choose one...</option><option value="already in stock">Already in stock</option><option value="new">New</option></select></label><div id="stock-part-fields" hidden><label>Search parts<input id="part-search" type="search" placeholder="Search by part name" /></label><label>Part name<select name="existingPart" id="existing-part" required><option value="">Choose a part...</option>${partNames.map((partName) => `<option>${escapeHtml(partName)}</option>`).join('')}</select></label></div><div id="new-part-fields" hidden><label>Part number<input name="partNumber" placeholder="e.g. M3-014, 608ZZ" required /></label><label>Part name<input name="title" placeholder="What is the part called?" required /></label><label>Brand<input name="brand" placeholder="Who makes it?" required /></label><label>Where<input name="where" placeholder="Where is it located or from?" required /></label></div>`;
+    const availability = formFields.querySelector('#parts-availability');
+    const stockFields = formFields.querySelector('#stock-part-fields');
+    const newFields = formFields.querySelector('#new-part-fields');
+    const partSearch = formFields.querySelector('#part-search');
+    const existingPart = formFields.querySelector('#existing-part');
+    const updatePartFields = () => {
+      const isStock = availability.value === 'already in stock';
+      const isNew = availability.value === 'new';
+      stockFields.hidden = !isStock;
+      newFields.hidden = !isNew;
+      existingPart.required = isStock;
+      formFields.querySelectorAll('#new-part-fields input').forEach((input) => { input.required = isNew; });
+    };
+    availability.addEventListener('change', updatePartFields);
+    partSearch.addEventListener('input', () => {
+      const query = partSearch.value.trim().toLowerCase();
+      [...existingPart.options].forEach((option, index) => {
+        if (index === 0) return;
+        option.hidden = query && !option.textContent.toLowerCase().includes(query);
+      });
+      if (existingPart.value && !existingPart.value.toLowerCase().includes(query)) existingPart.value = '';
+    });
+    updatePartFields();
+    return;
+  }
   formFields.innerHTML = logTypeConfig[type].fields.map((field) => {
     const required = field.required ? ' required' : '';
     const prompt = field.prompt ? ` placeholder="${escapeHtml(field.prompt)}"` : '';
@@ -290,10 +317,41 @@ function renderSheet() {
   const entries = getEntries().filter((entry) => entry.type === selectedType).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   document.querySelector('#sheet-title').innerHTML = `${selectedType} <span>log</span>`;
   document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
-  document.querySelector('#sheet-body').innerHTML = entries.map((entry) => `<tr><td><strong>${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
+  document.querySelector('#sheet-body').innerHTML = entries.map((entry) => `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
   document.querySelector('#empty-sheet').hidden = entries.length > 0;
   renderTabs();
   document.querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteEntry(button.dataset.delete)));
+  document.querySelectorAll('[data-edit-title]').forEach((titleElement) => {
+    titleElement.addEventListener('blur', () => updateEntryTitle(titleElement.dataset.editTitle, titleElement.textContent));
+    titleElement.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        titleElement.blur();
+      }
+    });
+  });
+}
+
+function updateEntryTitle(id, nextTitle) {
+  const entry = getEntries().find((candidate) => candidate.id === id);
+  const title = String(nextTitle || '').trim();
+  if (!entry || !title) {
+    renderSheet();
+    return;
+  }
+  const values = { ...(entry.values || {}), title };
+  supabaseClient.from(databaseTable).update({ title, values }).eq('id', id).then(({ error }) => {
+    if (error) {
+      showToast(databaseErrorMessage(error, 'Could not update that title.'));
+      renderSheet();
+      return;
+    }
+    entry.title = title;
+    entry.values = values;
+    renderActivity();
+    renderSheet();
+    showToast('Title updated.');
+  });
 }
 
 function deleteEntry(id) {
@@ -391,9 +449,16 @@ window.setInterval(updateDateDisplays, 60000);
 logForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const formData = new FormData(event.target);
-  const values = Object.fromEntries(logTypeConfig[selectedType].fields.map((field) => [field.key, String(formData.get(field.key) || '').trim()]));
+  const values = selectedType === 'Parts'
+    ? Object.fromEntries(['inventoryStatus', 'existingPart', 'partNumber', 'title', 'brand', 'where'].map((key) => [key, String(formData.get(key) || '').trim()]))
+    : Object.fromEntries(logTypeConfig[selectedType].fields.map((field) => [field.key, String(formData.get(field.key) || '').trim()]));
+  if (selectedType === 'Parts' && values.inventoryStatus === 'already in stock') values.title = values.existingPart;
   const title = values.title;
-  const details = values.details;
+  const details = selectedType === 'Parts'
+    ? values.inventoryStatus === 'new'
+      ? `${values.brand} / ${values.where}`
+      : 'Already in stock'
+    : values.details;
   if (!title || !details) return;
   const newEntry = { id: crypto.randomUUID(), type: selectedType, title, details, context: values.context || '', time: values.time || 'Not specified', values, createdAt: new Date().toISOString(), color: logTypeConfig[selectedType].color };
   supabaseClient.from(databaseTable).insert(buildSupabaseRecord(newEntry)).select().single().then(({ error }) => {

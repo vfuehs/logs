@@ -30,6 +30,8 @@ th { color: #8d918e; background: rgba(220,222,216,.35); font: 9px var(--mono); l
 th, td { border-bottom: 1px solid var(--line); padding: 14px 14px; vertical-align: top; }
 tr:last-child td { border-bottom: 0; }
 td strong { font-weight: 500; }
+.editable-title { cursor: text; }
+.editable-title:focus { outline: 1px solid var(--cyan); outline-offset: 3px; }
 .details-cell { color: var(--muted); max-width: 260px; line-height: 1.45; }
 .delete-entry { border: 0; background: transparent; color: #a3a7a3; font-size: 18px; line-height: 1; }
 .delete-entry:hover { color: var(--coral); }
