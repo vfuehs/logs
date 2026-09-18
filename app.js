@@ -230,7 +230,7 @@ function renderFormFields(type) {
       .filter((entry) => entry.type === 'Parts')
       .map((entry) => entry.title)
       .filter(Boolean))].sort((first, second) => first.localeCompare(second));
-    formFields.innerHTML = `<label>Availability<select name="inventoryStatus" id="parts-availability" required><option value="">Choose one...</option><option value="already in stock">Already in stock</option><option value="new">New</option></select></label><div id="stock-part-fields" hidden><label>Search parts<input id="part-search" type="search" placeholder="Search by part name" /></label><label>Part name<select name="existingPart" id="existing-part" required><option value="">Choose a part...</option>${partNames.map((partName) => `<option>${escapeHtml(partName)}</option>`).join('')}</select></label><label>Quantity<input name="quantity" type="number" min="1" step="1" placeholder="How many?" required /></label></div><div id="new-part-fields" hidden><label>Part number<input name="partNumber" placeholder="e.g. M3-014, 608ZZ" required /></label><label>Part name<input name="title" placeholder="What is the part called?" required /></label><label>Brand<input name="brand" placeholder="Who makes it?" required /></label><label>Where<input name="where" placeholder="Where is it located or from?" required /></label><label>Quantity<input name="quantity" type="number" min="1" step="1" placeholder="How many?" required /></label></div>`;
+    formFields.innerHTML = `<label>Availability<select name="inventoryStatus" id="parts-availability" required><option value="">Choose one...</option><option value="already in stock">Already in stock</option><option value="new">New</option></select></label><label>Quantity<input name="quantity" id="parts-quantity" type="number" min="1" step="1" placeholder="How many?" required /></label><div id="stock-part-fields" hidden><label>Search parts<input id="part-search" type="search" placeholder="Search by part name" /></label><label>Part name<select name="existingPart" id="existing-part"><option value="">Choose a part...</option>${partNames.map((partName) => `<option>${escapeHtml(partName)}</option>`).join('')}</select></label></div><div id="new-part-fields" hidden><label>Part number<input name="partNumber" placeholder="e.g. M3-014, 608ZZ" /></label><label>Part name<input name="title" placeholder="What is the part called?" /></label><label>Brand<input name="brand" placeholder="Who makes it?" /></label><label>Where<input name="where" placeholder="Where is it located or from?" /></label></div>`;
     const availability = formFields.querySelector('#parts-availability');
     const stockFields = formFields.querySelector('#stock-part-fields');
     const newFields = formFields.querySelector('#new-part-fields');
@@ -242,7 +242,7 @@ function renderFormFields(type) {
       stockFields.hidden = !isStock;
       newFields.hidden = !isNew;
       existingPart.required = isStock;
-      formFields.querySelector('#stock-part-fields input[name="quantity"]').required = isStock;
+      formFields.querySelector('#parts-quantity').required = isStock || isNew;
       formFields.querySelectorAll('#new-part-fields input').forEach((input) => { input.required = isNew; });
     };
     availability.addEventListener('change', updatePartFields);
