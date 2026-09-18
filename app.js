@@ -316,11 +316,22 @@ function renderTabs() {
 
 function renderSheet() {
   const entries = getEntries().filter((entry) => entry.type === selectedType).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const displayEntries = selectedType === 'Parts'
+    ? [...entries.reduce((groups, entry) => {
+      const existing = groups.get(entry.title);
+      if (existing) {
+        existing.quantity += Number.parseInt(entry.values?.quantity, 10) || 0;
+      } else {
+        groups.set(entry.title, { ...entry, quantity: Number.parseInt(entry.values?.quantity, 10) || 0 });
+      }
+      return groups;
+    }, new Map()).values()]
+    : entries;
   document.querySelector('#sheet-title').innerHTML = `${selectedType} <span>log</span>`;
   document.querySelector('#sheet-fourth-heading').textContent = selectedType === 'Parts' ? 'Quantity' : 'Time';
   const totalQuantity = selectedType === 'Parts' ? entries.reduce((total, entry) => total + (Number.parseInt(entry.values?.quantity, 10) || 0), 0) : 0;
-  document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${selectedType === 'Parts' ? ` / Total quantity: ${totalQuantity}` : ''}`;
-  document.querySelector('#sheet-body').innerHTML = entries.map((entry) => `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${selectedType === 'Parts' ? escapeHtml(entry.values?.quantity || '-') : escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
+  document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${selectedType === 'Parts' ? ` / ${displayEntries.length} unique parts / Total quantity: ${totalQuantity}` : ''}`;
+  document.querySelector('#sheet-body').innerHTML = displayEntries.map((entry) => `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${selectedType === 'Parts' ? escapeHtml(entry.quantity) : escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
   document.querySelector('#empty-sheet').hidden = entries.length > 0;
   renderTabs();
   document.querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteEntry(button.dataset.delete)));
