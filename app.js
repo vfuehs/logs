@@ -230,7 +230,7 @@ function renderFormFields(type) {
       .filter((entry) => entry.type === 'Parts')
       .map((entry) => entry.title)
       .filter(Boolean))].sort((first, second) => first.localeCompare(second));
-    formFields.innerHTML = `<label>Availability<select name="inventoryStatus" id="parts-availability" required><option value="">Choose one...</option><option value="already in stock">Already in stock</option><option value="new">New</option></select></label><div id="stock-part-fields" hidden><label>Search parts<input id="part-search" type="search" placeholder="Search by part name" /></label><label>Part name<select name="existingPart" id="existing-part" required><option value="">Choose a part...</option>${partNames.map((partName) => `<option>${escapeHtml(partName)}</option>`).join('')}</select></label></div><div id="new-part-fields" hidden><label>Part number<input name="partNumber" placeholder="e.g. M3-014, 608ZZ" required /></label><label>Part name<input name="title" placeholder="What is the part called?" required /></label><label>Brand<input name="brand" placeholder="Who makes it?" required /></label><label>Where<input name="where" placeholder="Where is it located or from?" required /></label></div>`;
+    formFields.innerHTML = `<label>Availability<select name="inventoryStatus" id="parts-availability" required><option value="">Choose one...</option><option value="already in stock">Already in stock</option><option value="new">New</option></select></label><div id="stock-part-fields" hidden><label>Search parts<input id="part-search" type="search" placeholder="Search by part name" /></label><label>Part name<select name="existingPart" id="existing-part" required><option value="">Choose a part...</option>${partNames.map((partName) => `<option>${escapeHtml(partName)}</option>`).join('')}</select></label><label>Quantity<input name="quantity" type="number" min="1" step="1" placeholder="How many?" required /></label></div><div id="new-part-fields" hidden><label>Part number<input name="partNumber" placeholder="e.g. M3-014, 608ZZ" required /></label><label>Part name<input name="title" placeholder="What is the part called?" required /></label><label>Brand<input name="brand" placeholder="Who makes it?" required /></label><label>Where<input name="where" placeholder="Where is it located or from?" required /></label><label>Quantity<input name="quantity" type="number" min="1" step="1" placeholder="How many?" required /></label></div>`;
     const availability = formFields.querySelector('#parts-availability');
     const stockFields = formFields.querySelector('#stock-part-fields');
     const newFields = formFields.querySelector('#new-part-fields');
@@ -242,6 +242,7 @@ function renderFormFields(type) {
       stockFields.hidden = !isStock;
       newFields.hidden = !isNew;
       existingPart.required = isStock;
+      formFields.querySelector('#stock-part-fields input[name="quantity"]').required = isStock;
       formFields.querySelectorAll('#new-part-fields input').forEach((input) => { input.required = isNew; });
     };
     availability.addEventListener('change', updatePartFields);
@@ -316,8 +317,10 @@ function renderTabs() {
 function renderSheet() {
   const entries = getEntries().filter((entry) => entry.type === selectedType).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   document.querySelector('#sheet-title').innerHTML = `${selectedType} <span>log</span>`;
-  document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
-  document.querySelector('#sheet-body').innerHTML = entries.map((entry) => `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
+  document.querySelector('#sheet-fourth-heading').textContent = selectedType === 'Parts' ? 'Quantity' : 'Time';
+  const totalQuantity = selectedType === 'Parts' ? entries.reduce((total, entry) => total + (Number.parseInt(entry.values?.quantity, 10) || 0), 0) : 0;
+  document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${selectedType === 'Parts' ? ` / Total quantity: ${totalQuantity}` : ''}`;
+  document.querySelector('#sheet-body').innerHTML = entries.map((entry) => `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${selectedType === 'Parts' ? escapeHtml(entry.values?.quantity || '-') : escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
   document.querySelector('#empty-sheet').hidden = entries.length > 0;
   renderTabs();
   document.querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteEntry(button.dataset.delete)));
@@ -450,16 +453,17 @@ logForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const formData = new FormData(event.target);
   const values = selectedType === 'Parts'
-    ? Object.fromEntries(['inventoryStatus', 'existingPart', 'partNumber', 'title', 'brand', 'where'].map((key) => [key, String(formData.get(key) || '').trim()]))
+    ? Object.fromEntries(['inventoryStatus', 'existingPart', 'partNumber', 'title', 'brand', 'where', 'quantity'].map((key) => [key, String(formData.get(key) || '').trim()]))
     : Object.fromEntries(logTypeConfig[selectedType].fields.map((field) => [field.key, String(formData.get(field.key) || '').trim()]));
   if (selectedType === 'Parts' && values.inventoryStatus === 'already in stock') values.title = values.existingPart;
+  if (selectedType === 'Parts') values.quantity = Number.parseInt(values.quantity, 10);
   const title = values.title;
   const details = selectedType === 'Parts'
     ? values.inventoryStatus === 'new'
       ? `${values.brand} / ${values.where}`
       : 'Already in stock'
     : values.details;
-  if (!title || !details) return;
+  if (!title || !details || (selectedType === 'Parts' && (!Number.isInteger(values.quantity) || values.quantity < 1))) return;
   const newEntry = { id: crypto.randomUUID(), type: selectedType, title, details, context: values.context || '', time: values.time || 'Not specified', values, createdAt: new Date().toISOString(), color: logTypeConfig[selectedType].color };
   supabaseClient.from(databaseTable).insert(buildSupabaseRecord(newEntry)).select().single().then(({ error }) => {
     if (error) {
