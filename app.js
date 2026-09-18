@@ -310,7 +310,13 @@ function renderStreak() {
 }
 
 function renderTabs() {
-  document.querySelector('#sheet-tabs').innerHTML = logTypes.map((type) => `<button class="sheet-tab ${type === selectedType ? 'active' : ''}" type="button" role="tab" data-sheet-type="${type}">${type}<span>${getEntries().filter((entry) => entry.type === type).length}</span></button>`).join('');
+  document.querySelector('#sheet-tabs').innerHTML = logTypes.map((type) => {
+    const typeEntries = getEntries().filter((entry) => entry.type === type);
+    const badge = type === 'Parts'
+      ? typeEntries.reduce((total, entry) => total + (Number.parseInt(entry.values?.quantity, 10) || 0), 0)
+      : typeEntries.length;
+    return `<button class="sheet-tab ${type === selectedType ? 'active' : ''}" type="button" role="tab" data-sheet-type="${type}">${type}<span>${badge}</span></button>`;
+  }).join('');
   document.querySelectorAll('[data-sheet-type]').forEach((button) => button.addEventListener('click', () => openSheet(button.dataset.sheetType)));
 }
 
@@ -328,10 +334,14 @@ function renderSheet() {
     }, new Map()).values()]
     : entries;
   document.querySelector('#sheet-title').innerHTML = `${selectedType} <span>log</span>`;
-  document.querySelector('#sheet-fourth-heading').textContent = selectedType === 'Parts' ? 'Quantity' : 'Time';
+  document.querySelector('#sheet-head').innerHTML = selectedType === 'Parts'
+    ? '<tr><th>Part name</th><th>Part number</th><th>Brand</th><th>Where</th><th>Quantity</th><th>Date</th><th></th></tr>'
+    : '<tr><th>Title</th><th>Details</th><th>Context</th><th>Time</th><th>Date</th><th></th></tr>';
   const totalQuantity = selectedType === 'Parts' ? entries.reduce((total, entry) => total + (Number.parseInt(entry.values?.quantity, 10) || 0), 0) : 0;
   document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${selectedType === 'Parts' ? ` / ${displayEntries.length} unique parts / Total quantity: ${totalQuantity}` : ''}`;
-  document.querySelector('#sheet-body').innerHTML = displayEntries.map((entry) => `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${selectedType === 'Parts' ? escapeHtml(entry.quantity) : escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
+  document.querySelector('#sheet-body').innerHTML = displayEntries.map((entry) => selectedType === 'Parts'
+    ? `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td>${escapeHtml(entry.values?.partNumber || '-')}</td><td>${escapeHtml(entry.values?.brand || '-')}</td><td>${escapeHtml(entry.values?.where || '-')}</td><td>${escapeHtml(entry.quantity)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`
+    : `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
   document.querySelector('#empty-sheet').hidden = entries.length > 0;
   renderTabs();
   document.querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteEntry(button.dataset.delete)));
