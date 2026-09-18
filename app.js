@@ -230,7 +230,7 @@ function renderFormFields(type) {
       .filter((entry) => entry.type === 'Parts')
       .map((entry) => entry.title)
       .filter(Boolean))].sort((first, second) => first.localeCompare(second));
-    formFields.innerHTML = `<label>Availability<select name="inventoryStatus" id="parts-availability" required><option value="">Choose one...</option><option value="already in stock">Already in stock</option><option value="new">New</option></select></label><label>Quantity<input name="quantity" id="parts-quantity" type="number" min="1" step="1" placeholder="How many?" required /></label><div id="stock-part-fields" hidden><label>Search parts<input id="part-search" type="search" placeholder="Search by part name" /></label><label>Part name<select name="existingPart" id="existing-part"><option value="">Choose a part...</option>${partNames.map((partName) => `<option>${escapeHtml(partName)}</option>`).join('')}</select></label></div><div id="new-part-fields" hidden><label>Part number<input name="partNumber" placeholder="e.g. M3-014, 608ZZ" /></label><label>Part name<input name="title" placeholder="What is the part called?" /></label><label>Brand<input name="brand" placeholder="Who makes it?" /></label><label>Where<input name="where" placeholder="Where is it located or from?" /></label></div>`;
+    formFields.innerHTML = `<label>Availability<select name="inventoryStatus" id="parts-availability" required><option value="">Choose one...</option><option value="already in stock">Already in stock</option><option value="new">New</option></select></label><label>Quantity<input name="quantity" id="parts-quantity" type="number" min="1" step="1" placeholder="How many?" required /></label><div id="stock-part-fields" hidden><label>Search parts<input id="part-search" type="search" placeholder="Search by part name" /></label><label>Part name<select name="existingPart" id="existing-part"><option value="">Choose a part...</option>${partNames.map((partName) => `<option>${escapeHtml(partName)}</option>`).join('')}</select></label></div><div id="new-part-fields" hidden><label>Part number<input name="partNumber" placeholder="e.g. M3-014, 608ZZ" /></label><label>Part name<input name="title" placeholder="What is the part called?" /></label><label>Brand<select name="brand"><option value="">Choose a brand...</option><option>Gobilda</option><option>REV</option><option>Andymark</option><option>Other</option></select></label><label>Where<select name="where"><option value="">Choose a location...</option><option>Inventory</option><option>On bot</option></select></label></div>`;
     const availability = formFields.querySelector('#parts-availability');
     const stockFields = formFields.querySelector('#stock-part-fields');
     const newFields = formFields.querySelector('#new-part-fields');
@@ -243,7 +243,7 @@ function renderFormFields(type) {
       newFields.hidden = !isNew;
       existingPart.required = isStock;
       formFields.querySelector('#parts-quantity').required = isStock || isNew;
-      formFields.querySelectorAll('#new-part-fields input').forEach((input) => { input.required = isNew; });
+      formFields.querySelectorAll('#new-part-fields input, #new-part-fields select').forEach((input) => { input.required = isNew; });
     };
     availability.addEventListener('change', updatePartFields);
     partSearch.addEventListener('input', () => {
@@ -320,6 +320,16 @@ function renderTabs() {
   document.querySelectorAll('[data-sheet-type]').forEach((button) => button.addEventListener('click', () => openSheet(button.dataset.sheetType)));
 }
 
+function getPartField(entry, field) {
+  const value = entry.values?.[field];
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  if ((field === 'brand' || field === 'where') && typeof entry.details === 'string') {
+    const legacyValues = entry.details.split('/').map((part) => part.trim());
+    return field === 'brand' ? legacyValues[0] || '' : legacyValues[1] || '';
+  }
+  return '';
+}
+
 function renderSheet() {
   const entries = getEntries().filter((entry) => entry.type === selectedType).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const displayEntries = selectedType === 'Parts'
@@ -340,7 +350,7 @@ function renderSheet() {
   const totalQuantity = selectedType === 'Parts' ? entries.reduce((total, entry) => total + (Number.parseInt(entry.values?.quantity, 10) || 0), 0) : 0;
   document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${selectedType === 'Parts' ? ` / ${displayEntries.length} unique parts / Total quantity: ${totalQuantity}` : ''}`;
   document.querySelector('#sheet-body').innerHTML = displayEntries.map((entry) => selectedType === 'Parts'
-    ? `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td>${escapeHtml(entry.values?.partNumber || '-')}</td><td>${escapeHtml(entry.values?.brand || '-')}</td><td>${escapeHtml(entry.values?.where || '-')}</td><td>${escapeHtml(entry.quantity)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`
+    ? `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td>${escapeHtml(getPartField(entry, 'partNumber') || '-')}</td><td>${escapeHtml(getPartField(entry, 'brand') || '-')}</td><td>${escapeHtml(getPartField(entry, 'where') || '-')}</td><td>${escapeHtml(entry.quantity)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`
     : `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
   document.querySelector('#empty-sheet').hidden = entries.length > 0;
   renderTabs();
