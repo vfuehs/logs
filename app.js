@@ -119,6 +119,27 @@ const partsChartFields = [
   { key: 'brand', label: 'Brand' },
   { key: 'where', label: 'Where' }
 ];
+const routeTypes = {
+  software: 'Software',
+  cad: 'CAD',
+  outreach: 'Outreach',
+  portfolio: 'Portfolio',
+  parts: 'Parts',
+  'parts-order': 'Parts order',
+  meetings: 'Meetings'
+};
+
+function getRouteType() {
+  const route = window.location.pathname.replace(/\/$/, '').split('/').pop().toLowerCase();
+  return routeTypes[route] || '';
+}
+
+function updateRoute(type, replace = false) {
+  const route = Object.entries(routeTypes).find(([, routeType]) => routeType === type)?.[0];
+  if (!route) return;
+  const url = `${window.location.origin}${window.location.pathname.split('/').slice(0, -1).join('/')}/${route}`;
+  window.history[replace ? 'replaceState' : 'pushState']({}, '', url);
+}
 
 function setConnectionState(error) {
   const notice = document.querySelector('#connection-notice');
@@ -290,6 +311,7 @@ function openLogForm(type) {
 
 function openSheet(type) {
   selectedType = type;
+  updateRoute(type);
   renderSheet();
   showOnly(sheetView);
 }
@@ -435,10 +457,11 @@ function updatePartField(id, field, nextValue) {
 
 function persistEntryUpdate(entry, updates) {
   const record = buildSupabaseRecord({ ...entry, ...updates });
-  return supabaseClient.from(databaseTable).update(updates).eq('id', entry.id).then(async ({ error }) => {
-    if (!error) return null;
+  return supabaseClient.from(databaseTable).update(updates).eq('id', entry.id).select('id').maybeSingle().then(async ({ data, error }) => {
+    if (!error && data?.id) return null;
+    const updateError = error || { code: 'PGRST116', message: 'The entry was not updated.' };
     const { error: deleteError } = await supabaseClient.from(databaseTable).delete().eq('id', entry.id);
-    if (deleteError) return error;
+    if (deleteError) return updateError;
     const { error: insertError } = await supabaseClient.from(databaseTable).insert(record);
     return insertError || null;
   });
@@ -601,9 +624,26 @@ document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('
 loadEntries().then(() => {
   renderActivity();
   renderStreak();
+  const routeType = getRouteType();
+  if (routeType) {
+    selectedType = routeType;
+    renderSheet();
+  }
   if (!logsUnlocked) {
     showOnly(lockView);
     document.querySelector('#unlock-password').focus();
+  } else {
+    if (routeType) showOnly(sheetView);
+    else showOnly(homeView);
+  }
+});
+
+window.addEventListener('popstate', () => {
+  const routeType = getRouteType();
+  if (routeType) {
+    selectedType = routeType;
+    renderSheet();
+    showOnly(sheetView);
   } else {
     showOnly(homeView);
   }
