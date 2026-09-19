@@ -129,15 +129,20 @@ const routeTypes = {
   meetings: 'Meetings'
 };
 
-function getRouteType() {
-  const route = window.location.pathname.replace(/\/$/, '').split('/').pop().toLowerCase();
-  return routeTypes[route] || '';
+function getRouteInfo() {
+  const segments = window.location.pathname.split('/').filter(Boolean);
+  const baseIndex = segments.indexOf('logs');
+  const route = baseIndex >= 0 ? segments[baseIndex + 1]?.toLowerCase() : '';
+  return { type: routeTypes[route] || '', view: segments[baseIndex + 2] === 'logs' ? 'sheet' : 'form' };
 }
 
-function updateRoute(type, replace = false) {
+function updateRoute(type, view = 'sheet', replace = false) {
   const route = Object.entries(routeTypes).find(([, routeType]) => routeType === type)?.[0];
   if (!route) return;
-  const url = `${window.location.origin}${window.location.pathname.split('/').slice(0, -1).join('/')}/${route}/`;
+  const segments = window.location.pathname.split('/');
+  const basePath = segments.slice(0, segments.indexOf('logs') + 1).join('/');
+  const suffix = view === 'sheet' ? 'logs/' : '';
+  const url = `${window.location.origin}${basePath}/${route}/${suffix}`;
   window.history[replace ? 'replaceState' : 'pushState']({}, '', url);
 }
 
@@ -303,6 +308,7 @@ function renderFormFields(type) {
 
 function openLogForm(type) {
   selectedType = type;
+  updateRoute(type, 'form');
   formType.textContent = type;
   renderFormFields(type);
   showOnly(formView);
@@ -311,7 +317,7 @@ function openLogForm(type) {
 
 function openSheet(type) {
   selectedType = type;
-  updateRoute(type);
+  updateRoute(type, 'sheet');
   renderSheet();
   showOnly(sheetView);
 }
@@ -539,7 +545,7 @@ function databaseErrorMessage(error, fallback) {
 
 document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', (event) => {
   event.preventDefault();
-  openSheet(button.dataset.type);
+  openLogForm(button.dataset.type);
 }));
 document.querySelector('#log-picker').addEventListener('change', (event) => {
   if (!event.target.value) return;
@@ -627,26 +633,31 @@ document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('
 loadEntries().then(() => {
   renderActivity();
   renderStreak();
-  const routeType = getRouteType();
-  if (routeType) {
-    selectedType = routeType;
-    renderSheet();
+  const routeInfo = getRouteInfo();
+  if (routeInfo.type) {
+    selectedType = routeInfo.type;
+    if (routeInfo.view === 'sheet') renderSheet();
+    else openLogForm(routeInfo.type);
   }
   if (!logsUnlocked) {
     showOnly(lockView);
     document.querySelector('#unlock-password').focus();
   } else {
-    if (routeType) showOnly(sheetView);
+    if (routeInfo.type && routeInfo.view === 'sheet') showOnly(sheetView);
+    else if (routeInfo.type) showOnly(formView);
     else showOnly(homeView);
   }
 });
 
 window.addEventListener('popstate', () => {
-  const routeType = getRouteType();
-  if (routeType) {
-    selectedType = routeType;
+  const routeInfo = getRouteInfo();
+  if (routeInfo.type && routeInfo.view === 'sheet') {
+    selectedType = routeInfo.type;
     renderSheet();
     showOnly(sheetView);
+  } else if (routeInfo.type) {
+    openLogForm(routeInfo.type);
+    showOnly(formView);
   } else {
     showOnly(homeView);
   }
