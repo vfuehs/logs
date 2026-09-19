@@ -417,11 +417,15 @@ function renderSheet() {
   const entries = getEntries().filter((entry) => entry.type === selectedType).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const displayEntries = selectedType === 'Parts'
     ? [...entries.reduce((groups, entry) => {
-      const existing = groups.get(entry.title);
+      const partNumber = getPartField(entry, 'partNumber');
+      const brand = getPartField(entry, 'brand');
+      const where = getPartField(entry, 'where');
+      const groupKey = [entry.title, partNumber, brand, where].join('\u0000');
+      const existing = groups.get(groupKey);
       if (existing) {
         existing.quantity += Number.parseInt(entry.values?.quantity, 10) || 0;
       } else {
-        groups.set(entry.title, { ...entry, quantity: Number.parseInt(entry.values?.quantity, 10) || 0 });
+        groups.set(groupKey, { ...entry, quantity: Number.parseInt(entry.values?.quantity, 10) || 0 });
       }
       return groups;
     }, new Map()).values()]
