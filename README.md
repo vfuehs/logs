@@ -37,6 +37,7 @@ alter table public.logs enable row level security;
 create policy "Anyone can read logs" on public.logs for select using (true);
 create policy "Anyone can add logs" on public.logs for insert with check (true);
 create policy "Anyone can delete logs" on public.logs for delete using (true);
+create policy "Anyone can update logs" on public.logs for update using (true) with check (true);
 ```
 
 If the table already exists, run this migration to ensure the schema matches the app's restore-safe expectations:
@@ -58,9 +59,11 @@ alter table public.logs enable row level security;
 drop policy if exists "Anyone can read logs" on public.logs;
 drop policy if exists "Anyone can add logs" on public.logs;
 drop policy if exists "Anyone can delete logs" on public.logs;
+drop policy if exists "Anyone can update logs" on public.logs;
 create policy "Anyone can read logs" on public.logs for select using (true);
 create policy "Anyone can add logs" on public.logs for insert with check (true);
 create policy "Anyone can delete logs" on public.logs for delete using (true);
+create policy "Anyone can update logs" on public.logs for update using (true) with check (true);
 ```
 
 The publishable key is safe to use in this browser app. These policies make the log publicly readable and editable, so add Supabase Auth and user-based policies before storing anything private.

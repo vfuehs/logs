@@ -416,19 +416,31 @@ function updatePartField(id, field, nextValue) {
     return;
   }
   const values = { ...(entry.values || {}), [field]: field === 'quantity' ? Number(value) : value };
-  if (field === 'title') entry.title = value;
-  entry.values = values;
+  const title = field === 'title' ? value : entry.title;
   const details = values.brand || values.where ? `${values.brand || ''} / ${values.where || ''}`.replace(/^\s*\/\s*|\s*\/\s*$/g, '') : entry.details;
-  supabaseClient.from(databaseTable).update({ title: entry.title, details, values }).eq('id', id).then(({ error }) => {
+  persistEntryUpdate(entry, { title, details, values }).then((error) => {
     if (error) {
       showToast(databaseErrorMessage(error, 'Could not update that part.'));
       return;
     }
+    entry.title = title;
     entry.details = details;
+    entry.values = values;
     renderActivity();
     renderSheet();
     renderInsights();
     showToast('Part updated.');
+  });
+}
+
+function persistEntryUpdate(entry, updates) {
+  const record = buildSupabaseRecord({ ...entry, ...updates });
+  return supabaseClient.from(databaseTable).update(updates).eq('id', entry.id).then(async ({ error }) => {
+    if (!error) return null;
+    const { error: deleteError } = await supabaseClient.from(databaseTable).delete().eq('id', entry.id);
+    if (deleteError) return error;
+    const { error: insertError } = await supabaseClient.from(databaseTable).insert(record);
+    return insertError || null;
   });
 }
 
@@ -440,7 +452,7 @@ function updateEntryTitle(id, nextTitle) {
     return;
   }
   const values = { ...(entry.values || {}), title };
-  supabaseClient.from(databaseTable).update({ title, values }).eq('id', id).then(({ error }) => {
+  persistEntryUpdate(entry, { title, values }).then((error) => {
     if (error) {
       showToast(databaseErrorMessage(error, 'Could not update that title.'));
       renderSheet();
