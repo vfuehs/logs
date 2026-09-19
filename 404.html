@@ -11,12 +11,9 @@
     <script>
       fetch('/logs/index.html').then((response) => response.text()).then((html) => {
         const parsed = new DOMParser().parseFromString(html, 'text/html');
-        document.head.innerHTML = parsed.head.innerHTML;
+        document.head.innerHTML = '<base href="/logs/">' + parsed.head.innerHTML;
         document.body.innerHTML = parsed.body.innerHTML;
         const scripts = [...parsed.body.querySelectorAll('script')].map((script) => script.getAttribute('src')).filter(Boolean);
-        const base = document.createElement('base');
-        base.href = '/logs/';
-        document.head.prepend(base);
         const loadScript = (index) => {
           if (!scripts[index]) return;
           const script = document.createElement('script');
