@@ -102,6 +102,7 @@ const homeView = document.querySelector('#home-view');
 const formView = document.querySelector('#form-view');
 const sheetView = document.querySelector('#sheet-view');
 const lockView = document.querySelector('#lock-view');
+const insightsView = document.querySelector('#insights-view');
 const formType = document.querySelector('#form-type');
 const logForm = document.querySelector('#log-form');
 const formFields = document.querySelector('#form-fields');
@@ -110,6 +111,14 @@ let selectedType = 'Software';
 let logsUnlocked = sessionStorage.getItem('trace-log-unlocked') === 'true';
 let deletedEntries = JSON.parse(sessionStorage.getItem(deletedKey) || '[]');
 let entries = [];
+const partsChartFields = [
+  { key: 'inventoryStatus', label: 'Availability' },
+  { key: 'quantity', label: 'Quantity' },
+  { key: 'partNumber', label: 'Part number' },
+  { key: 'title', label: 'Part name' },
+  { key: 'brand', label: 'Brand' },
+  { key: 'where', label: 'Where' }
+];
 
 function setConnectionState(error) {
   const notice = document.querySelector('#connection-notice');
@@ -221,6 +230,7 @@ function showOnly(view) {
   formView.hidden = view !== formView;
   sheetView.hidden = view !== sheetView;
   lockView.hidden = view !== lockView;
+  insightsView.hidden = view !== insightsView;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -320,6 +330,30 @@ function renderTabs() {
   document.querySelectorAll('[data-sheet-type]').forEach((button) => button.addEventListener('click', () => openSheet(button.dataset.sheetType)));
 }
 
+function getFieldsForCharts(type) {
+  return type === 'Parts' ? partsChartFields : logTypeConfig[type].fields;
+}
+
+function renderInsights() {
+  const content = document.querySelector('#insights-content');
+  content.innerHTML = logTypes.map((type) => {
+    const typeEntries = getEntries().filter((entry) => entry.type === type);
+    const fields = getFieldsForCharts(type);
+    const charts = fields.map((field) => {
+      const counts = new Map();
+      typeEntries.forEach((entry) => {
+        const answer = field.key === 'title' ? entry.title : entry.values?.[field.key];
+        const label = answer === undefined || answer === null || String(answer).trim() === '' ? 'Not answered' : String(answer);
+        counts.set(label, (counts.get(label) || 0) + 1);
+      });
+      const sortedAnswers = [...counts.entries()].sort((first, second) => second[1] - first[1]);
+      const maximum = sortedAnswers[0]?.[1] || 1;
+      return `<div class="chart-block"><div class="chart-question">${escapeHtml(field.label)}</div>${sortedAnswers.length ? sortedAnswers.slice(0, 6).map(([answer, count]) => `<div class="chart-row"><span>${escapeHtml(answer)}</span><i><b style="width:${(count / maximum) * 100}%"></b></i><strong>${count}</strong></div>`).join('') : '<p class="empty-activity">No answers yet.</p>'}</div>`;
+    }).join('');
+    return `<section class="insight-section"><div class="section-heading"><h2>${escapeHtml(type)}</h2><span>${typeEntries.length} ${typeEntries.length === 1 ? 'ENTRY' : 'ENTRIES'}</span></div><div class="chart-grid">${charts}</div></section>`;
+  }).join('');
+}
+
 function getPartField(entry, field) {
   const value = entry.values?.[field];
   if (typeof value === 'string' && value.trim()) return value.trim();
@@ -350,7 +384,7 @@ function renderSheet() {
   const totalQuantity = selectedType === 'Parts' ? entries.reduce((total, entry) => total + (Number.parseInt(entry.values?.quantity, 10) || 0), 0) : 0;
   document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${selectedType === 'Parts' ? ` / ${displayEntries.length} unique parts / Total quantity: ${totalQuantity}` : ''}`;
   document.querySelector('#sheet-body').innerHTML = displayEntries.map((entry) => selectedType === 'Parts'
-    ? `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td>${escapeHtml(getPartField(entry, 'partNumber') || '-')}</td><td>${escapeHtml(getPartField(entry, 'brand') || '-')}</td><td>${escapeHtml(getPartField(entry, 'where') || '-')}</td><td>${escapeHtml(entry.quantity)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`
+    ? `<tr><td><input class="editable-part" data-edit-part="${entry.id}" data-part-field="title" value="${escapeHtml(entry.title)}" aria-label="Edit part name" /></td><td><input class="editable-part" data-edit-part="${entry.id}" data-part-field="partNumber" value="${escapeHtml(getPartField(entry, 'partNumber'))}" aria-label="Edit part number" /></td><td><select class="editable-part" data-edit-part="${entry.id}" data-part-field="brand" aria-label="Edit brand"><option value="">-</option>${['Gobilda', 'REV', 'Andymark', 'Other'].map((brand) => `<option${getPartField(entry, 'brand') === brand ? ' selected' : ''}>${brand}</option>`).join('')}</select></td><td><select class="editable-part" data-edit-part="${entry.id}" data-part-field="where" aria-label="Edit location"><option value="">-</option>${['Inventory', 'On bot'].map((location) => `<option${getPartField(entry, 'where') === location ? ' selected' : ''}>${location}</option>`).join('')}</select></td><td><input class="editable-part quantity-edit" type="number" min="1" step="1" data-edit-part="${entry.id}" data-part-field="quantity" value="${escapeHtml(entry.quantity)}" aria-label="Edit quantity" /></td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`
     : `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
   document.querySelector('#empty-sheet').hidden = entries.length > 0;
   renderTabs();
@@ -363,6 +397,32 @@ function renderSheet() {
         titleElement.blur();
       }
     });
+  });
+  document.querySelectorAll('[data-edit-part]').forEach((field) => field.addEventListener('change', () => updatePartField(field.dataset.editPart, field.dataset.partField, field.value)));
+}
+
+function updatePartField(id, field, nextValue) {
+  const entry = getEntries().find((candidate) => candidate.id === id);
+  if (!entry) return;
+  const value = String(nextValue || '').trim();
+  if (field === 'quantity' && (!Number.isInteger(Number(value)) || Number(value) < 1)) {
+    renderSheet();
+    return;
+  }
+  const values = { ...(entry.values || {}), [field]: field === 'quantity' ? Number(value) : value };
+  if (field === 'title') entry.title = value;
+  entry.values = values;
+  const details = values.brand || values.where ? `${values.brand || ''} / ${values.where || ''}`.replace(/^\s*\/\s*|\s*\/\s*$/g, '') : entry.details;
+  supabaseClient.from(databaseTable).update({ title: entry.title, details, values }).eq('id', id).then(({ error }) => {
+    if (error) {
+      showToast(databaseErrorMessage(error, 'Could not update that part.'));
+      return;
+    }
+    entry.details = details;
+    renderActivity();
+    renderSheet();
+    renderInsights();
+    showToast('Part updated.');
   });
 }
 
@@ -514,7 +574,10 @@ document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('
   item.classList.add('active');
   if (item.dataset.view === 'home') showOnly(homeView);
   if (item.dataset.view === 'timeline') openSheet(selectedType);
-  if (item.dataset.view === 'insights') showToast('Insights will appear as your log grows.');
+  if (item.dataset.view === 'insights') {
+    renderInsights();
+    showOnly(insightsView);
+  }
 }));
 
 loadEntries().then(() => {

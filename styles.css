@@ -33,6 +33,19 @@ td strong { font-weight: 500; }
 .editable-title { cursor: text; }
 .editable-title:focus { outline: 1px solid var(--cyan); outline-offset: 3px; }
 .details-cell { color: var(--muted); max-width: 260px; line-height: 1.45; }
+.editable-part { width: 100%; min-width: 90px; border: 0; border-bottom: 1px solid transparent; padding: 3px 0; background: transparent; font-size: 11px; }
+.editable-part:hover, .editable-part:focus { border-bottom-color: var(--cyan); outline: 0; }
+.quantity-edit { max-width: 70px; }
+.insight-section + .insight-section { margin-top: 48px; }
+.insights-view .sheet-heading { margin-bottom: 35px; }
+.chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.chart-block { border: 1px solid var(--line); padding: 17px; background: rgba(255,255,255,.24); }
+.chart-question { margin-bottom: 16px; font: 10px var(--mono); letter-spacing: 1px; text-transform: uppercase; }
+.chart-row { display: grid; grid-template-columns: minmax(80px, 1.2fr) 2fr 20px; gap: 10px; align-items: center; margin-top: 10px; font-size: 11px; }
+.chart-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chart-row i { display: block; height: 7px; background: var(--line); }
+.chart-row b { display: block; height: 100%; background: var(--cyan); }
+.chart-row strong { font: 10px var(--mono); text-align: right; }
 .delete-entry { border: 0; background: transparent; color: #a3a7a3; font-size: 18px; line-height: 1; }
 .delete-entry:hover { color: var(--coral); }
 .empty-sheet { padding: 45px 20px; text-align: center; color: var(--muted); font: 11px var(--mono); }
