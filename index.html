@@ -50,13 +50,13 @@
           <div class="connection-notice" id="connection-notice" hidden><strong>Shared database unavailable.</strong><span id="connection-message">Check your Supabase connection and try again.</span><button class="text-button" id="retry-connection" type="button">Retry <span>↗</span></button></div>
           <div class="section-heading"><h2>Choose a log type</h2><span>SELECT ONE TO START</span></div>
           <div class="type-grid">
-            <button class="type-card software" type="button" data-type="Software"><span class="card-arrow">↗</span><span class="type-symbol code-symbol">&lt;/&gt;</span><span class="type-name">Software</span><span class="type-description">Builds, bugs &amp; breakthroughs</span></button>
-            <button class="type-card cad" type="button" data-type="CAD"><span class="card-arrow">↗</span><span class="type-symbol cube-symbol">◇</span><span class="type-name">CAD</span><span class="type-description">Designs, iterations &amp; models</span></button>
-            <button class="type-card outreach" type="button" data-type="Outreach"><span class="card-arrow">↗</span><span class="type-symbol wave-symbol">⌁</span><span class="type-name">Outreach</span><span class="type-description">People, conversations &amp; follow-ups</span></button>
-            <button class="type-card portfolio" type="button" data-type="Portfolio"><span class="card-arrow">↗</span><span class="type-symbol frame-symbol">[ ]</span><span class="type-name">Portfolio</span><span class="type-description">Work worth remembering</span></button>
-            <button class="type-card parts" type="button" data-type="Parts"><span class="card-arrow">↗</span><span class="type-symbol parts-symbol">+ +</span><span class="type-name">Parts</span><span class="type-description">Components, inventory &amp; notes</span></button>
-            <button class="type-card order" type="button" data-type="Parts order"><span class="card-arrow">↗</span><span class="type-symbol order-symbol">→</span><span class="type-name">Parts order</span><span class="type-description">Purchases, shipments &amp; receipts</span></button>
-            <button class="type-card meetings" type="button" data-type="Meetings"><span class="card-arrow">↗</span><span class="type-symbol meeting-symbol">••</span><span class="type-name">Meetings</span><span class="type-description">Notes, decisions &amp; next steps</span></button>
+            <a class="type-card software" href="/logs/software/" data-type="Software"><span class="card-arrow">↗</span><span class="type-symbol code-symbol">&lt;/&gt;</span><span class="type-name">Software</span><span class="type-description">Builds, bugs &amp; breakthroughs</span></a>
+            <a class="type-card cad" href="/logs/cad/" data-type="CAD"><span class="card-arrow">↗</span><span class="type-symbol cube-symbol">◇</span><span class="type-name">CAD</span><span class="type-description">Designs, iterations &amp; models</span></a>
+            <a class="type-card outreach" href="/logs/outreach/" data-type="Outreach"><span class="card-arrow">↗</span><span class="type-symbol wave-symbol">⌁</span><span class="type-name">Outreach</span><span class="type-description">People, conversations &amp; follow-ups</span></a>
+            <a class="type-card portfolio" href="/logs/portfolio/" data-type="Portfolio"><span class="card-arrow">↗</span><span class="type-symbol frame-symbol">[ ]</span><span class="type-name">Portfolio</span><span class="type-description">Work worth remembering</span></a>
+            <a class="type-card parts" href="/logs/parts/" data-type="Parts"><span class="card-arrow">↗</span><span class="type-symbol parts-symbol">+ +</span><span class="type-name">Parts</span><span class="type-description">Components, inventory &amp; notes</span></a>
+            <a class="type-card order" href="/logs/parts-order/" data-type="Parts order"><span class="card-arrow">↗</span><span class="type-symbol order-symbol">→</span><span class="type-name">Parts order</span><span class="type-description">Purchases, shipments &amp; receipts</span></a>
+            <a class="type-card meetings" href="/logs/meetings/" data-type="Meetings"><span class="card-arrow">↗</span><span class="type-symbol meeting-symbol">••</span><span class="type-name">Meetings</span><span class="type-description">Notes, decisions &amp; next steps</span></a>
           </div>
 
           <div class="bottom-grid">
@@ -97,6 +97,6 @@
     </div>
     <div class="toast" id="toast" role="status">Entry saved to your log.</div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=20260919-routes-save"></script>
+    <script src="app.js?v=20260919-routes-save-links"></script>
   </body>
 </html>

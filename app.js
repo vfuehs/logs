@@ -137,7 +137,7 @@ function getRouteType() {
 function updateRoute(type, replace = false) {
   const route = Object.entries(routeTypes).find(([, routeType]) => routeType === type)?.[0];
   if (!route) return;
-  const url = `${window.location.origin}${window.location.pathname.split('/').slice(0, -1).join('/')}/${route}`;
+  const url = `${window.location.origin}${window.location.pathname.split('/').slice(0, -1).join('/')}/${route}/`;
   window.history[replace ? 'replaceState' : 'pushState']({}, '', url);
 }
 
@@ -537,7 +537,10 @@ function databaseErrorMessage(error, fallback) {
   return fallback;
 }
 
-document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', () => openSheet(button.dataset.type)));
+document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', (event) => {
+  event.preventDefault();
+  openSheet(button.dataset.type);
+}));
 document.querySelector('#log-picker').addEventListener('change', (event) => {
   if (!event.target.value) return;
   openSheet(event.target.value);

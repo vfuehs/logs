@@ -69,3 +69,4 @@ td strong { font-weight: 500; }
 #unlock-form { display: grid; gap: 22px; }
 .lock-error { display: none; color: var(--coral); font: 10px var(--mono); }
 .lock-error.show { display: block; }
+.type-card { color: inherit; text-decoration: none; }
