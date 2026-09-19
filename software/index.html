@@ -8,6 +8,6 @@
   </head>
   <body>
     <div>Loading logs...</div>
-    <script>fetch('/logs/index.html').then((response) => response.text()).then((html) => { const parsed = new DOMParser().parseFromString(html, 'text/html'); document.head.innerHTML = parsed.head.innerHTML; document.body.innerHTML = parsed.body.innerHTML; const scripts = [...parsed.body.querySelectorAll('script')]; const loadScript = (index) => { if (!scripts[index]) return; const script = document.createElement('script'); script.src = scripts[index].src; script.onload = () => loadScript(index + 1); document.body.appendChild(script); }; loadScript(0); });</script>
+    <script>fetch('/logs/index.html').then((response) => response.text()).then((html) => { const parsed = new DOMParser().parseFromString(html, 'text/html'); document.head.innerHTML = parsed.head.innerHTML; document.body.innerHTML = parsed.body.innerHTML; const scripts = [...parsed.body.querySelectorAll('script')].map((script) => script.getAttribute('src')).filter(Boolean); const base = document.createElement('base'); base.href = '/logs/'; document.head.prepend(base); const loadScript = (index) => { if (!scripts[index]) return; const script = document.createElement('script'); script.src = new URL(scripts[index], '/logs/').href; script.onload = () => loadScript(index + 1); document.body.appendChild(script); }; loadScript(0); });</script>
   </body>
 </html>
