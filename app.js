@@ -156,6 +156,11 @@ function updateRoute(type, view = 'sheet', replace = false) {
   window.history[replace ? 'replaceState' : 'pushState']({}, '', url);
 }
 
+function goHome() {
+  window.history.pushState({}, '', getHomeUrl());
+  showOnly(homeView);
+}
+
 function setConnectionState(error) {
   const notice = document.querySelector('#connection-notice');
   const message = document.querySelector('#connection-message');
@@ -562,8 +567,8 @@ document.querySelector('#log-picker').addEventListener('change', (event) => {
   openSheet(event.target.value);
   event.target.value = '';
 });
-document.querySelector('#back-button').addEventListener('click', () => showOnly(homeView));
-document.querySelector('#sheet-back').addEventListener('click', () => showOnly(homeView));
+document.querySelector('#back-button').addEventListener('click', goHome);
+document.querySelector('#sheet-back').addEventListener('click', goHome);
 document.querySelector('#sheet-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#empty-new').addEventListener('click', () => openLogForm(selectedType));
 document.querySelector('#timeline-button').addEventListener('click', () => openSheet(selectedType));
@@ -632,7 +637,7 @@ logForm.addEventListener('submit', (event) => {
 document.querySelectorAll('.nav-item').forEach((item) => item.addEventListener('click', () => {
   document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active'));
   item.classList.add('active');
-  if (item.dataset.view === 'home') showOnly(homeView);
+  if (item.dataset.view === 'home') goHome();
   if (item.dataset.view === 'timeline') openSheet(selectedType);
   if (item.dataset.view === 'insights') {
     renderInsights();
