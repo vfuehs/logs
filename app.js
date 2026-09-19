@@ -136,6 +136,16 @@ function getRouteInfo() {
   return { type: routeTypes[route] || '', view: segments[baseIndex + 2] === 'logs' ? 'sheet' : 'form' };
 }
 
+function getHomeUrl() {
+  const segments = window.location.pathname.split('/');
+  const logsIndex = segments.indexOf('logs');
+  const basePath = segments.slice(0, logsIndex + 1).join('/');
+  return `${window.location.origin}${basePath}/`;
+}
+
+const navigationEntry = performance.getEntriesByType('navigation')[0];
+if (navigationEntry?.type === 'reload' && getRouteInfo().type) window.location.replace(getHomeUrl());
+
 function updateRoute(type, view = 'sheet', replace = false) {
   const route = Object.entries(routeTypes).find(([, routeType]) => routeType === type)?.[0];
   if (!route) return;
