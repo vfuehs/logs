@@ -537,7 +537,7 @@ function databaseErrorMessage(error, fallback) {
   return fallback;
 }
 
-document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', () => openLogForm(button.dataset.type)));
+document.querySelectorAll('.type-card').forEach((button) => button.addEventListener('click', () => openSheet(button.dataset.type)));
 document.querySelector('#log-picker').addEventListener('change', (event) => {
   if (!event.target.value) return;
   openSheet(event.target.value);
