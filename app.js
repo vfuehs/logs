@@ -20,11 +20,11 @@ const logTypeConfig = {
   Outreach: {
     color: 'lime',
     fields: [
-      { key: 'title', label: 'Contact or organization', prompt: 'Who did you connect with?', required: true },
+      { key: 'title', label: 'Contact or organizations', prompt: 'Who did you connect with?', required: true },
       { key: 'details', label: 'Who did it?', prompt: 'In format "Rookie/Veteran, Name"', type: 'textarea', required: true },
       { key: 'followUp', label: 'Date', prompt: 'e.g. Friday, Sep 4' },
       { key: 'nextStep', label: 'Next step', prompt: 'What needs to happen next?' },
-      { key: 'context', label: 'Relationship / event', prompt: 'e.g. company, contact, event' }
+      { key: 'context', label: 'Relationship/event', prompt: 'e.g. company, contact, event' }
     ]
   },
   Portfolio: {
@@ -364,6 +364,12 @@ function getPartField(entry, field) {
   return '';
 }
 
+function getEntryField(entry, field) {
+  if (field.key === 'title') return entry.title;
+  if (field.key === 'details') return entry.details;
+  return entry.values?.[field.key] || '';
+}
+
 function renderSheet() {
   const entries = getEntries().filter((entry) => entry.type === selectedType).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const displayEntries = selectedType === 'Parts'
@@ -380,12 +386,12 @@ function renderSheet() {
   document.querySelector('#sheet-title').innerHTML = `${selectedType} <span>log</span>`;
   document.querySelector('#sheet-head').innerHTML = selectedType === 'Parts'
     ? '<tr><th>Part name</th><th>Part number</th><th>Brand</th><th>Where</th><th>Quantity</th><th>Date</th><th></th></tr>'
-    : '<tr><th>Title</th><th>Details</th><th>Context</th><th>Time</th><th>Date</th><th></th></tr>';
+    : `<tr>${logTypeConfig[selectedType].fields.map((field) => `<th>${escapeHtml(field.label)}</th>`).join('')}<th>Date</th><th></th></tr>`;
   const totalQuantity = selectedType === 'Parts' ? entries.reduce((total, entry) => total + (Number.parseInt(entry.values?.quantity, 10) || 0), 0) : 0;
   document.querySelector('#sheet-count').textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}${selectedType === 'Parts' ? ` / ${displayEntries.length} unique parts / Total quantity: ${totalQuantity}` : ''}`;
   document.querySelector('#sheet-body').innerHTML = displayEntries.map((entry) => selectedType === 'Parts'
     ? `<tr><td><input class="editable-part" data-edit-part="${entry.id}" data-part-field="title" value="${escapeHtml(entry.title)}" aria-label="Edit part name" /></td><td><input class="editable-part" data-edit-part="${entry.id}" data-part-field="partNumber" value="${escapeHtml(getPartField(entry, 'partNumber'))}" aria-label="Edit part number" /></td><td><select class="editable-part" data-edit-part="${entry.id}" data-part-field="brand" aria-label="Edit brand"><option value="">-</option>${['Gobilda', 'REV', 'Andymark', 'Other'].map((brand) => `<option${getPartField(entry, 'brand') === brand ? ' selected' : ''}>${brand}</option>`).join('')}</select></td><td><select class="editable-part" data-edit-part="${entry.id}" data-part-field="where" aria-label="Edit location"><option value="">-</option>${['Inventory', 'On bot'].map((location) => `<option${getPartField(entry, 'where') === location ? ' selected' : ''}>${location}</option>`).join('')}</select></td><td><input class="editable-part quantity-edit" type="number" min="1" step="1" data-edit-part="${entry.id}" data-part-field="quantity" value="${escapeHtml(entry.quantity)}" aria-label="Edit quantity" /></td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`
-    : `<tr><td><strong class="editable-title" contenteditable="true" data-edit-title="${entry.id}" aria-label="Edit ${escapeHtml(entry.title)}">${escapeHtml(entry.title)}</strong></td><td class="details-cell">${escapeHtml(entry.details)}</td><td>${escapeHtml(entry.context || '-')}</td><td>${escapeHtml(entry.time)}</td><td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
+    : `<tr>${logTypeConfig[selectedType].fields.map((field) => `<td>${escapeHtml(getEntryField(entry, field) || '-')}</td>`).join('')}<td>${formatDate(entry.createdAt)}</td><td><button class="delete-entry" type="button" data-delete="${entry.id}" aria-label="Delete ${escapeHtml(entry.title)}">×</button></td></tr>`).join('');
   document.querySelector('#empty-sheet').hidden = entries.length > 0;
   renderTabs();
   document.querySelectorAll('[data-delete]').forEach((button) => button.addEventListener('click', () => deleteEntry(button.dataset.delete)));
